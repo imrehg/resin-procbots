@@ -109,12 +109,6 @@ class DiscourseService extends message_service_1.MessageService {
             };
         });
     }
-    getWorkerContextFromMessage(event) {
-        return event.data.cookedEvent.context;
-    }
-    getEventTypeFromMessage(event) {
-        return event.cookedEvent.type;
-    }
     fetchTopic(topicId) {
         if (this.topicCache.has(topicId)) {
             return Promise.resolve(this.topicCache.get(topicId));

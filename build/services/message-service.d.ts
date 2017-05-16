@@ -20,8 +20,8 @@ export declare abstract class MessageService extends WorkerClient<string | null>
     fetchPrivateMessages(_event: ReceiptContext, _filter: RegExp): Promise<string[]>;
     protected abstract activateMessageListener(): void;
     protected abstract sendMessage(data: ServiceEmitContext): Promise<MessageEmitResponse>;
-    protected abstract getWorkerContextFromMessage(event: MessageWorkerEvent): string;
-    protected abstract getEventTypeFromMessage(event: MessageEvent): string;
+    protected getWorkerContextFromMessage(event: MessageEvent): string;
+    protected getEventTypeFromMessage(event: MessageEvent): string;
     protected handleEvent: (event: MessageEvent) => Promise<void>;
     protected getWorker: (event: MessageWorkerEvent) => Worker<string | null>;
     readonly abstract serviceName: string;

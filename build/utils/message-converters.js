@@ -43,7 +43,7 @@ exports.translateTrigger = translateTrigger;
 function initThreadHandleContext(event, to) {
     return {
         action: event.action,
-        genesis: event.genesis,
+        origin: event.origin,
         private: event.private,
         source: event.source,
         sourceIds: event.sourceIds,
@@ -57,7 +57,7 @@ exports.initThreadHandleContext = initThreadHandleContext;
 function initMessageHandleContext(event, to) {
     return {
         action: event.action,
-        genesis: event.genesis,
+        origin: event.origin,
         private: event.private,
         source: event.source,
         sourceIds: event.sourceIds,
@@ -80,10 +80,10 @@ function fromDiscoursePost(data) {
     const findSource = new RegExp(`^${ignorePublic}\\((\\S*)\\)`, 'i');
     const findContent = new RegExp(`^${ignorePublic}(?:\\(\\S*\\))?\\s?([\\s\\S]*)$`, 'i');
     const sourceArray = data.rawEvent.raw.match(findSource);
-    const genesis = sourceArray === null ? data.source : sourceArray[1];
+    const origin = sourceArray === null ? data.source : sourceArray[1];
     return {
         action: 'create',
-        genesis,
+        origin,
         private: data.rawEvent.post_type === 4,
         source: 'discourse',
         sourceIds: {
@@ -99,7 +99,7 @@ function fromDiscoursePost(data) {
 function fromDiscourseTopic(data) {
     return {
         action: 'create',
-        genesis: data.source,
+        origin: data.source,
         private: false,
         source: data.source,
         sourceIds: {
@@ -120,10 +120,10 @@ function fromFlowdockMessage(data) {
     const findSource = new RegExp(`^${ignorePublic}\\((\\S*)\\)`, 'i');
     const findContent = new RegExp(`^${ignorePublic}(?:\\(\\S*\\))?\\s?([\\s\\S]*)$`, 'i');
     const sourceArray = data.rawEvent.content.match(findSource);
-    const genesis = sourceArray === null ? data.source : sourceArray[1];
+    const origin = sourceArray === null ? data.source : sourceArray[1];
     return {
         action: 'create',
-        genesis,
+        origin,
         private: data.rawEvent.content.match(isPublic) === null,
         source: data.source,
         sourceIds: {
@@ -139,7 +139,7 @@ function fromFlowdockMessage(data) {
 function toDiscourseMessage(data) {
     const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
     const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
-    const content = `[${data.private ? priv : pub}](${data.genesis})`
+    const content = `[${data.private ? priv : pub}](${data.origin})`
         + data.text;
     return {
         api_token: data.toIds.token,
@@ -152,7 +152,7 @@ function toDiscourseMessage(data) {
 function toFlowdockMessage(data) {
     const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
     const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
-    const content = `[${data.private ? priv : pub}](${data.genesis})`
+    const content = `[${data.private ? priv : pub}](${data.origin})`
         + data.text;
     return {
         content,
@@ -165,7 +165,7 @@ function toFlowdockMessage(data) {
 function toFlowdockThread(data) {
     const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
     return {
-        content: `[${pub}](${data.genesis})${data.text}`,
+        content: `[${pub}](${data.origin})${data.text}`,
         event: 'message',
         external_user_name: data.toIds.user,
         flow: data.toIds.room,

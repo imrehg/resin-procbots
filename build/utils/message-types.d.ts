@@ -33,7 +33,7 @@ interface MessageIds {
 }
 interface MessageContext {
     action: 'create'|'update'|'delete';
-    genesis: string;
+    origin: string;
     type: 'thread'|'message';
     private: boolean;
     source: string;
@@ -51,7 +51,7 @@ interface ReceiptIds extends MessageIds {
 }
 interface ReceiptContext extends MessageContext {
     action: 'create';
-    genesis: string;
+    origin: string;
     type: 'message' | 'thread';
     private: boolean;
     source: string;
@@ -67,7 +67,7 @@ interface MessageReceiptIds extends ReceiptIds {
 }
 interface MessageReceiptContext extends ReceiptContext {
     action: 'create';
-    genesis: string;
+    origin: string;
     type: 'message';
     private: boolean;
     source: string;
@@ -82,7 +82,7 @@ interface ThreadReceiptIds extends ReceiptIds {
 }
 interface ThreadReceiptContext extends ReceiptContext {
     action: 'create';
-    genesis: string;
+    origin: string;
     type: 'thread';
     private: false;
     source: string;
@@ -98,7 +98,7 @@ interface HandleIds extends MessageIds {
 }
 interface HandleContext extends MessageContext {
     action: 'create';
-    genesis: string;
+    origin: string;
     type: 'message' | 'thread';
     private: boolean;
     source: string;
@@ -116,7 +116,7 @@ interface MessageHandleIds extends HandleIds {
 }
 interface MessageHandleContext extends HandleContext {
     action: 'create';
-    genesis: string;
+    origin: string;
     type: 'message';
     private: boolean;
     source: string;
@@ -133,7 +133,7 @@ interface ThreadHandleIds extends HandleIds {
 }
 interface ThreadHandleContext extends HandleContext {
     action: 'create';
-    genesis: string;
+    origin: string;
     type: 'thread';
     private: false;
     source: string;
@@ -151,7 +151,7 @@ interface TransmitIds extends MessageIds {
 }
 interface TransmitContext extends MessageContext {
     action: 'create';
-    genesis: string;
+    origin: string;
     type: 'message' | 'thread';
     private: boolean;
     source: string;
@@ -168,7 +168,7 @@ interface MessageTransmitIds extends TransmitIds {
 }
 interface MessageTransmitContext extends TransmitContext {
     action: 'create';
-    genesis: string;
+    origin: string;
     type: 'message';
     private: boolean;
     source: string;
@@ -184,7 +184,7 @@ interface ThreadTransmitIds extends TransmitIds {
 }
 interface ThreadTransmitContext extends TransmitContext {
     action: 'create';
-    genesis: string;
+    origin: string;
     type: 'thread';
     private: boolean;
     source: string;

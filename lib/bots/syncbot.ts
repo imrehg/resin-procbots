@@ -97,7 +97,7 @@ export class SyncBot extends ProcBot {
             // Convert the raw payload from the listener into a more generic message object
             const generic = makeGeneric(from, data);
             // Prevent loops and system messages
-            if (_.intersection([generic.source, generic.genesis], ['system', to]).length === 0) {
+            if (_.intersection([generic.source, generic.origin], ['system', to]).length === 0) {
                 // Pass handling to more specific methods
                 if (generic.type === 'thread') {
                     return this.handleThread(initThreadHandleContext(generic as ThreadReceiptContext, to));
@@ -159,7 +159,7 @@ export class SyncBot extends ProcBot {
         // Create a message event to echo with the details
         const fromEvent: MessageHandleContext = {
             action: 'create',
-            genesis: 'system',
+            origin: 'system',
             private: true,
             source: 'system',
             sourceIds: {
@@ -218,7 +218,7 @@ export class SyncBot extends ProcBot {
         // Build event for target object to reference source
         const toEvent: MessageHandleContext = {
             action: 'create',
-            genesis: 'system',
+            origin: 'system',
             private: true,
             source: 'system',
             sourceIds: {
@@ -238,7 +238,7 @@ export class SyncBot extends ProcBot {
         // Build event for source object to reference target
         const fromEvent: MessageHandleContext = {
             action: 'create',
-            genesis: 'system',
+            origin: 'system',
             private: true,
             source: 'system',
             sourceIds: {

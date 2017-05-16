@@ -98,12 +98,6 @@ class FlowdockService extends message_service_1.MessageService {
             response.send('ok');
         });
     }
-    getWorkerContextFromMessage(event) {
-        return event.data.cookedEvent.context;
-    }
-    getEventTypeFromMessage(event) {
-        return event.cookedEvent.type;
-    }
     sendMessage(body) {
         const org = process.env.FLOWDOCK_ORGANIZATION_PARAMETERIZED_NAME;
         const token = new Buffer(process.env.FLOWDOCK_LISTENER_ACCOUNT_API_TOKEN).toString('base64');

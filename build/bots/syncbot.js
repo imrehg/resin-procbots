@@ -31,7 +31,7 @@ class SyncBot extends procbot_1.ProcBot {
     createRouter(from, to) {
         return (_registration, data) => {
             const generic = message_converters_1.makeGeneric(from, data);
-            if (_.intersection([generic.source, generic.genesis], ['system', to]).length === 0) {
+            if (_.intersection([generic.source, generic.origin], ['system', to]).length === 0) {
                 if (generic.type === 'thread') {
                     return this.handleThread(message_converters_1.initThreadHandleContext(generic, to));
                 }
@@ -67,7 +67,7 @@ class SyncBot extends procbot_1.ProcBot {
     handleError(error, event) {
         const fromEvent = {
             action: 'create',
-            genesis: 'system',
+            origin: 'system',
             private: true,
             source: 'system',
             sourceIds: {
@@ -108,7 +108,7 @@ class SyncBot extends procbot_1.ProcBot {
         }
         const toEvent = {
             action: 'create',
-            genesis: 'system',
+            origin: 'system',
             private: true,
             source: 'system',
             sourceIds: {
@@ -127,7 +127,7 @@ class SyncBot extends procbot_1.ProcBot {
         };
         const fromEvent = {
             action: 'create',
-            genesis: 'system',
+            origin: 'system',
             private: true,
             source: 'system',
             sourceIds: {

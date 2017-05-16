@@ -12,13 +12,13 @@ class MessageService extends worker_client_1.WorkerClient {
         this.listening = false;
         this._eventListeners = {};
         this.handleEvent = (event) => {
-            const listeners = this._eventListeners[event.cookedEvent.type] || [];
+            const listeners = this._eventListeners[this.getEventTypeFromMessage(event)] || [];
             return Promise.map(listeners, (listener) => {
                 return listener.listenerMethod(listener, event);
             }).return();
         };
         this.getWorker = (event) => {
-            const context = this.getWorkerContextFromMessage(event);
+            const context = this.getWorkerContextFromMessage(event.data);
             const retrieved = this.workers.get(context);
             if (retrieved) {
                 return retrieved;
@@ -79,6 +79,12 @@ class MessageService extends worker_client_1.WorkerClient {
     }
     fetchPrivateMessages(_event, _filter) {
         return Promise.reject(new Error('Not yet implemented'));
+    }
+    getWorkerContextFromMessage(event) {
+        return event.cookedEvent.context;
+    }
+    getEventTypeFromMessage(event) {
+        return event.cookedEvent.type;
     }
 }
 MessageService.logger = new logger_1.Logger();

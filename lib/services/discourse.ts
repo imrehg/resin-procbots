@@ -4,8 +4,6 @@ import * as path from 'path';
 import * as request from 'request-promise';
 import {
     MessageEmitResponse,
-    MessageEvent,
-    MessageWorkerEvent,
     ReceiptContext,
 } from '../utils/message-types';
 import {
@@ -150,22 +148,6 @@ export class DiscourseService extends MessageService implements ServiceListener,
                 source: this.serviceName,
             };
         });
-    }
-
-    /**
-     * Retrieve the scope for event order preservation
-     * @param event details to examine
-     */
-    protected getWorkerContextFromMessage(event: MessageWorkerEvent): string {
-        return event.data.cookedEvent.context;
-    }
-
-    /**
-     * Retrieve the event type for event firing
-     * @param event details to examine
-     */
-    protected getEventTypeFromMessage(event: MessageEvent): string {
-        return event.cookedEvent.type;
     }
 
     /**

@@ -87,7 +87,7 @@ export function translateTrigger(trigger: string, service: string): string {
 export function initThreadHandleContext(event: ThreadReceiptContext, to: string): ThreadHandleContext {
     return {
         action: event.action,
-        genesis: event.genesis,
+        origin: event.origin,
         private: event.private,
         source: event.source,
         sourceIds: event.sourceIds,
@@ -106,7 +106,7 @@ export function initThreadHandleContext(event: ThreadReceiptContext, to: string)
 export function initMessageHandleContext(event: MessageReceiptContext, to: string): MessageHandleContext {
     return {
         action: event.action,
-        genesis: event.genesis,
+        origin: event.origin,
         private: event.private,
         source: event.source,
         sourceIds: event.sourceIds,
@@ -140,13 +140,13 @@ function fromDiscoursePost(data: ServiceEvent): MessageReceiptContext {
     const findSource = new RegExp(`^${ignorePublic}\\((\\S*)\\)`, 'i');
     // Ignore the public indicator and the source section then capture everything
     const findContent = new RegExp(`^${ignorePublic}(?:\\(\\S*\\))?\\s?([\\s\\S]*)$`, 'i');
-    // Extract the encoded genesis for this event
+    // Extract the encoded origin for this event
     const sourceArray: string[] = data.rawEvent.raw.match(findSource);
-    const genesis = sourceArray === null ? data.source : sourceArray[1];
+    const origin = sourceArray === null ? data.source : sourceArray[1];
     // Create and return the generic message event
     return {
         action: 'create',
-        genesis,
+        origin,
         private: data.rawEvent.post_type === 4,
         source: 'discourse',
         sourceIds: {
@@ -168,7 +168,7 @@ function fromDiscourseTopic(data: ServiceEvent): ThreadReceiptContext {
     // Create and return the generic message event
     return {
         action: 'create',
-        genesis: data.source,
+        origin: data.source,
         private: false,
         source: data.source,
         sourceIds: {
@@ -198,13 +198,13 @@ function fromFlowdockMessage(data: ServiceEvent): MessageReceiptContext {
     const findSource = new RegExp(`^${ignorePublic}\\((\\S*)\\)`, 'i');
     // Ignore the public indicator and the source section then capture everything
     const findContent = new RegExp(`^${ignorePublic}(?:\\(\\S*\\))?\\s?([\\s\\S]*)$`, 'i');
-    // Extract the encoded genesis for this event
+    // Extract the encoded origin for this event
     const sourceArray: string[] = data.rawEvent.content.match(findSource);
-    const genesis = sourceArray === null ? data.source : sourceArray[1];
+    const origin = sourceArray === null ? data.source : sourceArray[1];
     // Create and return the generic message event
     return {
         action: 'create',
-        genesis,
+        origin,
         private: data.rawEvent.content.match(isPublic) === null,
         source: data.source,
         sourceIds: {
@@ -226,9 +226,9 @@ function toDiscourseMessage(data: MessageTransmitContext): DiscourseMessageEmitC
     // Retrieve publicity indicators from the environment
     const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
     const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
-    // Build the content with the indicator and genesis at the front
+    // Build the content with the indicator and origin at the front
     const content =
-        `[${data.private ? priv : pub}](${data.genesis})`
+        `[${data.private ? priv : pub}](${data.origin})`
         + data.text;
     // Create and return the generic message event
     return {
@@ -248,9 +248,9 @@ function toFlowdockMessage(data: MessageTransmitContext): FlowdockMessageEmitCon
     // Retrieve publicity indicators from the environment
     const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
     const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
-    // Build the content with the indicator and genesis at the front
+    // Build the content with the indicator and origin at the front
     const content =
-        `[${data.private ? priv : pub}](${data.genesis})`
+        `[${data.private ? priv : pub}](${data.origin})`
         + data.text;
     // Create and return the generic message event
     return {
@@ -271,7 +271,7 @@ function toFlowdockThread(data: ThreadTransmitContext): FlowdockMessageEmitConte
     const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
     // Create and return the generic message event
     return {
-        content: `[${pub}](${data.genesis})${data.text}`,
+        content: `[${pub}](${data.origin})${data.text}`,
         event: 'message',
         external_user_name: data.toIds.user,
         flow: data.toIds.room,

@@ -1,6 +1,6 @@
 import * as Promise from 'bluebird';
 import { FlowdockMessageEmitContext } from '../services/flowdock-types';
-import { MessageEmitResponse, MessageEvent, MessageWorkerEvent, ReceiptContext } from '../utils/message-types';
+import { MessageEmitResponse, ReceiptContext } from '../utils/message-types';
 import { MessageService } from './message-service';
 import { ServiceEmitter, ServiceListener } from './service-types';
 export declare class FlowdockService extends MessageService implements ServiceEmitter, ServiceListener {
@@ -10,8 +10,6 @@ export declare class FlowdockService extends MessageService implements ServiceEm
     fetchThread(event: ReceiptContext, filter: RegExp): Promise<string[]>;
     fetchPrivateMessages(event: ReceiptContext, filter: RegExp): Promise<string[]>;
     protected activateMessageListener(): void;
-    protected getWorkerContextFromMessage(event: MessageWorkerEvent): string;
-    protected getEventTypeFromMessage(event: MessageEvent): string;
     protected sendMessage(body: FlowdockMessageEmitContext): Promise<MessageEmitResponse>;
     readonly serviceName: string;
 }

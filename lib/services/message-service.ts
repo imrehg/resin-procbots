@@ -148,13 +148,17 @@ implements ServiceListener, ServiceEmitter {
      * Retrieve the scope for event order preservation
      * @param event details to examine
      */
-    protected abstract getWorkerContextFromMessage(event: MessageWorkerEvent): string
+    protected getWorkerContextFromMessage(event: MessageEvent): string {
+        return event.cookedEvent.context;
+    }
 
     /**
      * Retrieve the event type for event firing
      * @param event details to examine
      */
-    protected abstract getEventTypeFromMessage(event: MessageEvent): string
+    protected getEventTypeFromMessage(event: MessageEvent): string {
+        return event.cookedEvent.type;
+    }
 
     /**
      * Handle an event once it's turn in the queue comes round
@@ -162,7 +166,7 @@ implements ServiceListener, ServiceEmitter {
      */
     protected handleEvent = (event: MessageEvent): Promise<void> => {
         // Retrieve and execute all the listener methods, nerfing their responses
-        const listeners = this._eventListeners[event.cookedEvent.type] || [];
+        const listeners = this._eventListeners[this.getEventTypeFromMessage(event)] || [];
         return Promise.map(listeners, (listener) => {
             return listener.listenerMethod(listener, event);
         }).return();
@@ -170,10 +174,11 @@ implements ServiceListener, ServiceEmitter {
 
     /**
      * Retrieve or create a worker for an event
+     * Bound to the object instance using =>
      */
     protected getWorker = (event: MessageWorkerEvent): Worker<string|null> => {
         // Attempt to retrieve an active worker for the context
-        const context = this.getWorkerContextFromMessage(event);
+        const context = this.getWorkerContextFromMessage(event.data);
         const retrieved = this.workers.get(context);
         if (retrieved) {
             return retrieved;

@@ -1,5 +1,5 @@
 import * as Promise from 'bluebird';
-import { MessageEmitResponse, MessageEvent, MessageWorkerEvent, ReceiptContext } from '../utils/message-types';
+import { MessageEmitResponse, ReceiptContext } from '../utils/message-types';
 import { DiscourseMessageEmitContext } from './discourse-types';
 import { MessageService } from './message-service';
 import { ServiceEmitter, ServiceListener } from './service-types';
@@ -10,8 +10,6 @@ export declare class DiscourseService extends MessageService implements ServiceL
     fetchThread(event: ReceiptContext, filter: RegExp): Promise<string[]>;
     protected activateMessageListener(): void;
     protected sendMessage(data: DiscourseMessageEmitContext): Promise<MessageEmitResponse>;
-    protected getWorkerContextFromMessage(event: MessageWorkerEvent): string;
-    protected getEventTypeFromMessage(event: MessageEvent): string;
     private fetchTopic(topicId);
     readonly serviceName: string;
 }

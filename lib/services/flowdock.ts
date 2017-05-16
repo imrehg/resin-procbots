@@ -27,8 +27,6 @@ import {
 } from '../services/flowdock-types';
 import {
     MessageEmitResponse,
-    MessageEvent,
-    MessageWorkerEvent,
     ReceiptContext,
 } from '../utils/message-types';
 import {
@@ -174,22 +172,6 @@ export class FlowdockService extends MessageService implements ServiceEmitter, S
         MessageService.app.get(`/${this.serviceName}/`, (_formData, response) => {
             response.send('ok');
         });
-    }
-
-    /**
-     * Retrieve the scope for event order preservation
-     * @param event details to examine
-     */
-    protected getWorkerContextFromMessage(event: MessageWorkerEvent): string {
-        return event.data.cookedEvent.context;
-    }
-
-    /**
-     * Retrieve the event type for event firing
-     * @param event details to examine
-     */
-    protected getEventTypeFromMessage(event: MessageEvent): string {
-        return event.cookedEvent.type;
     }
 
     /**
