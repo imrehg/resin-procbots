@@ -41,13 +41,13 @@ import {
     HandleContext,
     MessageContext,
     MessageHandleContext,
-    MessageReceiptContext,
-    MessageTransmitContext,
-    ReceiptContext,
+    MessageListenContext,
+    MessageEmitContext,
+    ListenContext,
     ThreadHandleContext,
-    ThreadReceiptContext,
-    ThreadTransmitContext,
-    TransmitContext,
+    ThreadListenContext,
+    ThreadEmitContext,
+    EmitContext,
 } from '../utils/message-types';
 
 /**
@@ -100,9 +100,9 @@ export class SyncBot extends ProcBot {
             if (_.intersection([generic.source, generic.origin], ['system', to]).length === 0) {
                 // Pass handling to more specific methods
                 if (generic.type === 'thread') {
-                    return this.handleThread(initThreadHandleContext(generic as ThreadReceiptContext, to));
+                    return this.handleThread(initThreadHandleContext(generic as ThreadListenContext, to));
                 } else if (generic.type === 'message') {
-                    return this.handleMessage(initMessageHandleContext(generic as MessageReceiptContext, to));
+                    return this.handleMessage(initMessageHandleContext(generic as MessageListenContext, to));
                 }
                 // We do not understand how to handle this message type
                 return Promise.reject(new Error('Event type not understood'));
@@ -122,7 +122,7 @@ export class SyncBot extends ProcBot {
             .then(() => this.searchPrivateExistingOrGeneric(event, 'user'))
             .then(() => this.searchPrivateOrGeneric(event, 'token'))
             // Create thread and connection entities
-            .then(() => this.create(event as ThreadTransmitContext, 'thread'))
+            .then(() => this.create(event as ThreadEmitContext, 'thread'))
             .then(() => this.createConnection(event, 'thread'))
             // Log the event
             .then(() => this.logSuccess(event))
@@ -141,7 +141,7 @@ export class SyncBot extends ProcBot {
                 .then(() => this.searchPrivateExistingOrGeneric(event, 'user'))
                 .then(() => this.searchPrivateOrGeneric(event, 'token'))
                 // Create the message
-                .then(() => this.create(event as MessageTransmitContext, 'message'))
+                .then(() => this.create(event as MessageEmitContext, 'message'))
                 // Log the event
                 .then(() => this.logSuccess(event))
                 .catch((error: Error) => this.handleError(error, event));
@@ -180,7 +180,7 @@ export class SyncBot extends ProcBot {
         this.searchSystem(fromEvent, 'user')
         .then(() => this.searchSystem(fromEvent, 'token'))
         // Report the error
-        .then(() => this.create(fromEvent as MessageTransmitContext, 'message'))
+        .then(() => this.create(fromEvent as MessageEmitContext, 'message'))
         .then(() => this.logSuccess(fromEvent))
         .catch((err) => this.logError(event, err.message));
     }
@@ -259,11 +259,11 @@ export class SyncBot extends ProcBot {
         return Promise.all([
             this.searchSystem(fromEvent, 'user')
             .then(() => this.searchSystem(fromEvent, 'token'))
-            .then(() => this.create(fromEvent as MessageTransmitContext, 'message'))
+            .then(() => this.create(fromEvent as MessageEmitContext, 'message'))
             ,
             this.searchSystem(toEvent, 'user')
             .then(() => this.searchSystem(toEvent, 'token'))
-            .then(() => this.create(toEvent as MessageTransmitContext, 'message'))
+            .then(() => this.create(toEvent as MessageEmitContext, 'message'))
         ]).reduce(() => { /**/ });
     }
 
@@ -272,7 +272,7 @@ export class SyncBot extends ProcBot {
      * @param event Details of the event to be handled
      * @param type Type of entity to create
      */
-    private create(event: TransmitContext, type: 'message' | 'thread'): Promise<string> {
+    private create(event: EmitContext, type: 'message' | 'thread'): Promise<string> {
         // Pass the event to the emitter
         return this.dispatchToEmitter(event.to, {
             contexts: {
@@ -417,7 +417,7 @@ export class SyncBot extends ProcBot {
         const findId = new RegExp(`Connects to ${event.to} ${type} ([\\w\\d-+\\/=]+)`, 'i');
         // Retrieve from the message service search a filtered thread history
         const messageService = this.getMessageService(event.source);
-        return messageService.fetchThread(event as ReceiptContext, findId)
+        return messageService.fetchThread(event as ListenContext, findId)
         .then((result) => {
             // If we found any comments from the messageService, reduce them to the first id
             const ids = result && result.length > 0 && result[0].match(findId);
@@ -442,7 +442,7 @@ export class SyncBot extends ProcBot {
         const findValue = new RegExp(`My ${event.to} ${type} is ([\\w\\d-+\\/=]+)`, 'i');
         // Retrieve from the message service a filtered private message history
         const messageService = this.getMessageService(event.source);
-        return messageService.fetchPrivateMessages(event as ReceiptContext, findValue)
+        return messageService.fetchPrivateMessages(event as ListenContext, findValue)
         .then((result) => {
             // If we found any comments from the messageService, reduce them to the first id
             const ids = result && result.length > 0 && result[result.length-1].match(findValue);

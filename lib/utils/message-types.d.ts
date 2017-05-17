@@ -1,15 +1,18 @@
+import * as Promise from 'bluebird';
 import {
     WorkerEvent,
 } from '../framework/worker';
 import {
     ServiceEmitContext,
     ServiceEmitResponse,
+    ServiceEmitter,
     ServiceEvent,
+    ServiceListener,
 } from '../services/service-types';
 
-type MessageReceiver = (data: MessageEvent) => ReceiptContext;
+type MessageReceiver = (data: MessageEvent) => ListenContext;
 
-type MessageTransmitter = (data: TransmitContext) => ServiceEmitContext;
+type MessageTransmitter = (data: EmitContext) => ServiceEmitContext;
 
 interface MessageEvent extends ServiceEvent {
     cookedEvent: {
@@ -34,7 +37,7 @@ interface MessageIds {
 interface MessageContext {
     action: 'create'|'update'|'delete';
     origin: string;
-    type: 'thread'|'message';
+    type: 'thread'|'message'; // TODO: Add 1-1 messages (aka PMs)
     private: boolean;
     source: string;
     sourceIds?: MessageIds;
@@ -43,50 +46,50 @@ interface MessageContext {
     toIds?: MessageIds;
 }
 
-interface ReceiptIds extends MessageIds {
+interface ListenIds extends MessageIds {
     user: string;
     message?: string;
     room: string;
     thread: string;
 }
-interface ReceiptContext extends MessageContext {
+interface ListenContext extends MessageContext {
     action: 'create';
     origin: string;
     type: 'message' | 'thread';
     private: boolean;
     source: string;
-    sourceIds: ReceiptIds;
+    sourceIds: ListenIds;
     text: string;
 }
 
-interface MessageReceiptIds extends ReceiptIds {
+interface MessageListenIds extends ListenIds {
     user: string;
     message: string;
     room: string;
     thread: string;
 }
-interface MessageReceiptContext extends ReceiptContext {
+interface MessageListenContext extends ListenContext {
     action: 'create';
     origin: string;
     type: 'message';
     private: boolean;
     source: string;
-    sourceIds: MessageReceiptIds;
+    sourceIds: MessageListenIds;
     text: string;
 }
 
-interface ThreadReceiptIds extends ReceiptIds {
+interface ThreadListenIds extends ListenIds {
     user: string;
     room: string;
     thread: string;
 }
-interface ThreadReceiptContext extends ReceiptContext {
+interface ThreadListenContext extends ListenContext {
     action: 'create';
     origin: string;
     type: 'thread';
     private: false;
     source: string;
-    sourceIds: ThreadReceiptIds;
+    sourceIds: ThreadListenIds;
     text: string;
 }
 
@@ -102,7 +105,7 @@ interface HandleContext extends MessageContext {
     type: 'message' | 'thread';
     private: boolean;
     source: string;
-    sourceIds: ReceiptIds;
+    sourceIds: ListenIds;
     text: string;
     to: string;
     toIds: HandleIds;
@@ -120,7 +123,7 @@ interface MessageHandleContext extends HandleContext {
     type: 'message';
     private: boolean;
     source: string;
-    sourceIds: MessageReceiptIds;
+    sourceIds: MessageListenIds;
     text: string;
     to: string;
     toIds: MessageHandleIds;
@@ -137,19 +140,19 @@ interface ThreadHandleContext extends HandleContext {
     type: 'thread';
     private: false;
     source: string;
-    sourceIds: ThreadReceiptIds;
+    sourceIds: ThreadListenIds;
     text: string;
     to: string;
     toIds: ThreadHandleIds;
 }
 
-interface TransmitIds extends MessageIds {
+interface EmitIds extends MessageIds {
     user: string;
     room: string;
     thread?: string;
     token: string;
 }
-interface TransmitContext extends MessageContext {
+interface EmitContext extends MessageContext {
     action: 'create';
     origin: string;
     type: 'message' | 'thread';
@@ -157,16 +160,16 @@ interface TransmitContext extends MessageContext {
     source: string;
     text: string;
     to: string;
-    toIds: TransmitIds;
+    toIds: EmitIds;
 }
 
-interface MessageTransmitIds extends TransmitIds {
+interface MessageEmitIds extends EmitIds {
     user: string;
     room: string;
     thread: string;
     token: string;
 }
-interface MessageTransmitContext extends TransmitContext {
+interface MessageEmitContext extends EmitContext {
     action: 'create';
     origin: string;
     type: 'message';
@@ -174,15 +177,15 @@ interface MessageTransmitContext extends TransmitContext {
     source: string;
     text: string;
     to: string;
-    toIds: MessageTransmitIds;
+    toIds: MessageEmitIds;
 }
 
-interface ThreadTransmitIds extends TransmitIds {
+interface ThreadEmitIds extends EmitIds {
     user: string;
     room: string;
     token: string;
 }
-interface ThreadTransmitContext extends TransmitContext {
+interface ThreadEmitContext extends EmitContext {
     action: 'create';
     origin: string;
     type: 'thread';
@@ -190,10 +193,10 @@ interface ThreadTransmitContext extends TransmitContext {
     source: string;
     text: string;
     to: string;
-    toIds: ThreadTransmitIds;
+    toIds: ThreadEmitIds;
 }
 
-interface MessageEmitResponse extends ServiceEmitResponse {
+interface EmitResponse extends ServiceEmitResponse {
     response?: {
         ids: {
             message: string,
@@ -202,4 +205,35 @@ interface MessageEmitResponse extends ServiceEmitResponse {
         [key: string]: any;
     };
     err?: any;
+}
+
+interface MessageEmitResponse extends EmitResponse {
+}
+
+interface ThreadEmitResponse extends EmitResponse {
+}
+
+interface MessageEmitter extends ServiceEmitter {
+}
+
+interface MessageListener extends ServiceListener {
+    // TODO: params and return should be in a message format
+    /**
+     * Retrieve the comments in a thread that match an optional filter
+     * @param event details to identify the event
+     * @param filter regex of comments to match
+     */
+    fetchThread: (event: ListenContext, filter: RegExp) => Promise<string[]>;
+
+    // TODO: params and return should be in a message format
+    /**
+     * Retrieve the private message history with a user
+     * @param event details of the event to consider
+     * @param filter optional criteria that must be met
+     */
+    fetchPrivateMessages: (event: ListenContext, filter: RegExp) => Promise<string[]>;
+
+    // TODO: Specify fetchMessage, and more broadly increase symettry with MessageEmitter
+    // For example fetchThread actually fetches messages and it might be fetchThreads that
+    // needs specifying
 }

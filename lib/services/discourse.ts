@@ -4,7 +4,10 @@ import * as path from 'path';
 import * as request from 'request-promise';
 import {
     MessageEmitResponse,
-    ReceiptContext,
+    ListenContext,
+    ThreadEmitContext,
+    ThreadEmitResponse,
+    MessageEmitContext,
 } from '../utils/message-types';
 import {
     DiscourseMessageEmitContext,
@@ -27,12 +30,16 @@ export class DiscourseService extends MessageService implements ServiceListener,
     private topicCache = new Map<string, any>();
     private postsSynced = new Set<number>();
 
+    public fetchPrivateMessages(_event: ListenContext, _filter: RegExp): Promise<string[]> {
+        throw new Error('Method not implemented.');
+    }
+
     /**
      * Retrieve the comments in a thread that match an optional filter
      * @param event details to identify the event
      * @param filter regex of comments to match
      */
-    public fetchThread(event: ReceiptContext, filter: RegExp): Promise<string[]> {
+    public fetchThread(event: ListenContext, filter: RegExp): Promise<string[]> {
         // Check that the event being asked about orginated with us
         if (event.source !== this.serviceName) {
             return Promise.reject(new Error('Cannot get discourse thread from non-discourse event'));
@@ -57,6 +64,10 @@ export class DiscourseService extends MessageService implements ServiceListener,
                 return match !== null && match.length > 0;
             });
         });
+    }
+
+    protected createThread(_data: ThreadEmitContext): Promise<ThreadEmitResponse> {
+        throw new Error('Method not implemented.');
     }
 
     /**
@@ -123,7 +134,7 @@ export class DiscourseService extends MessageService implements ServiceListener,
      * Emit data to the API
      * @param data emit context
      */
-    protected sendMessage(data: DiscourseMessageEmitContext): Promise<MessageEmitResponse> {
+    protected createMessage(data: MessageEmitContext): Promise<MessageEmitResponse> {
         // Extract a couple of details from out of the context
         const token = data.api_token;
         const username = data.api_username;

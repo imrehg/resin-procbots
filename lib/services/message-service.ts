@@ -8,16 +8,19 @@ import {
     LogLevel,
 } from '../utils/logger';
 import {
+    ListenContext,
+    MessageEmitContext,
     MessageEmitResponse,
+    MessageEmitter,
     MessageEvent,
+    MessageListener,
     MessageWorkerEvent,
-    ReceiptContext,
+    ThreadEmitContext,
+    ThreadEmitResponse,
 } from '../utils/message-types';
 import {
-    ServiceEmitContext,
     ServiceEmitRequest,
-    ServiceEmitter,
-    ServiceListener,
+    ServiceEmitResponse,
     ServiceRegistration,
 } from './service-types';
 
@@ -26,7 +29,7 @@ import {
  */
 export abstract class MessageService
 extends WorkerClient<string|null>
-implements ServiceListener, ServiceEmitter {
+implements MessageListener, MessageEmitter {
     protected static logger = new Logger();
     private static _app: express.Express;
     private listening: boolean = false;
@@ -59,16 +62,9 @@ implements ServiceListener, ServiceEmitter {
         }
     }
 
-    /**
-     * Instruct the child to start listening if we haven't already
-     */
-    public listen() {
-        if (!this.listening) {
-            this.listening = true;
-            this.activateMessageListener();
-            MessageService.logger.log(LogLevel.INFO, `---> Started '${this.serviceName}' listener`);
-        }
-    }
+    public abstract fetchThread(event: ListenContext, filter: RegExp): Promise<string[]>;
+
+    public abstract fetchPrivateMessages(event: ListenContext, filter: RegExp): Promise<string[]>;
 
     /**
      * Express an interest in a particular type of event
@@ -90,10 +86,16 @@ implements ServiceListener, ServiceEmitter {
      * Emit data to the external service
      * @param data ServiceEmitRequest to parse
      */
-    public sendData(data: ServiceEmitRequest): Promise<MessageEmitResponse> {
+    public sendData(data: ServiceEmitRequest): Promise<ServiceEmitResponse> {
         // Check the contexts for relevance before passing down the inheritance
         if (data.contexts[this.serviceName]) {
-            return this.sendMessage(data.contexts[this.serviceName]);
+            if (data.contexts[this.serviceName].type === 'message') {
+                return this.createMessage(data.contexts[this.serviceName]);
+            } else if (data.contexts[this.serviceName].type === 'thread') {
+                return this.createThread(data.contexts[this.serviceName]);
+            } else {
+                return Promise.reject(new Error(`Invalid ${this.serviceName} context`));
+            }
         } else {
             // If we have a context to emit to this service, then no-op is correct resolution
             return Promise.resolve({
@@ -113,26 +115,6 @@ implements ServiceListener, ServiceEmitter {
         super.queueEvent(data);
     }
 
-    // TODO: event should be in the same format as emitted
-    /**
-     * Retrieve the comments in a thread that match an optional filter
-     * @param event details to identify the event
-     * @param filter regex of comments to match
-     */
-    public fetchThread(_event: ReceiptContext, _filter: RegExp): Promise<string[]> {
-        return Promise.reject(new Error('Not yet implemented'));
-    }
-
-    // TODO: event should be in the same format as emitted
-    /**
-     * Retrieve the private message history with a user
-     * @param event details of the event to consider
-     * @param filter optional criteria that must be met
-     */
-    public fetchPrivateMessages(_event: ReceiptContext, _filter: RegExp): Promise<string[]> {
-        return Promise.reject(new Error('Not yet implemented'));
-    }
-
     /**
      * Activate this object as a listener
      */
@@ -142,7 +124,13 @@ implements ServiceListener, ServiceEmitter {
      * Emit data to the API
      * @param data emit context
      */
-    protected abstract sendMessage(data: ServiceEmitContext): Promise<MessageEmitResponse>
+    protected abstract createMessage(data: MessageEmitContext): Promise<MessageEmitResponse>
+
+    /**
+     * Emit data to the API
+     * @param data emit context
+     */
+    protected abstract createThread(data: ThreadEmitContext): Promise<ThreadEmitResponse>
 
     /**
      * Retrieve the scope for event order preservation
@@ -187,6 +175,17 @@ implements ServiceListener, ServiceEmitter {
             const created = new Worker<string>(context, this.removeWorker);
             this.workers.set(context, created);
             return created;
+        }
+    }
+
+    /**
+     * Instruct the child to start listening if we haven't already
+     */
+    private listen() {
+        if (!this.listening) {
+            this.listening = true;
+            this.activateMessageListener();
+            MessageService.logger.log(LogLevel.INFO, `---> Started '${this.serviceName}' listener`);
         }
     }
 

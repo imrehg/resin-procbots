@@ -27,7 +27,7 @@ import {
 } from '../services/flowdock-types';
 import {
     MessageEmitResponse,
-    ReceiptContext,
+    ListenContext,
 } from '../utils/message-types';
 import {
     MessageService
@@ -51,7 +51,7 @@ export class FlowdockService extends MessageService implements ServiceEmitter, S
      * @param event details to identify the event
      * @param filter regex of comments to match
      */
-    public fetchThread(event: ReceiptContext, filter: RegExp): Promise<string[]> {
+    public fetchThread(event: ListenContext, filter: RegExp): Promise<string[]> {
         // Check that the event being asked about orginated with us
         if (event.source !== this.serviceName) {
             return Promise.reject(new Error('Cannot get flowdock thread from non-flowdock event'));
@@ -96,7 +96,7 @@ export class FlowdockService extends MessageService implements ServiceEmitter, S
      * @param event details of the event to consider
      * @param filter optional criteria that must be met
      */
-    public fetchPrivateMessages(event: ReceiptContext, filter: RegExp): Promise<string[]> {
+    public fetchPrivateMessages(event: ListenContext, filter: RegExp): Promise<string[]> {
         // Check that the event being asked about orginated with us
         if (event.source !== this.serviceName) {
             return Promise.reject(new Error('Cannot get flowdock thread from non-flowdock event'));
@@ -178,7 +178,7 @@ export class FlowdockService extends MessageService implements ServiceEmitter, S
      * Emit data to the API
      * @param data emit context
      */
-    protected sendMessage(body: FlowdockMessageEmitContext): Promise<MessageEmitResponse> {
+    protected sendPayload(body: FlowdockMessageEmitContext): Promise<MessageEmitResponse> {
         // Extract a couple of details from the environment
         const org = process.env.FLOWDOCK_ORGANIZATION_PARAMETERIZED_NAME;
         const token = new Buffer(process.env.FLOWDOCK_LISTENER_ACCOUNT_API_TOKEN).toString('base64');

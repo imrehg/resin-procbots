@@ -10,17 +10,17 @@ import {
     ServiceEvent,
 } from '../services/service-types';
 import {
+    EmitContext,
+    ListenContext,
+    MessageEmitContext,
     MessageEvent,
     MessageHandleContext,
-    MessageReceiptContext,
+    MessageListenContext,
     MessageReceiver,
-    MessageTransmitContext,
     MessageTransmitter,
-    ReceiptContext,
+    ThreadEmitContext,
     ThreadHandleContext,
-    ThreadReceiptContext,
-    ThreadTransmitContext,
-    TransmitContext,
+    ThreadListenContext,
 } from './message-types';
 
 /**
@@ -28,7 +28,7 @@ import {
  * @param from source of the data
  * @param data object to transform
  */
-export function makeGeneric(from: string, data: MessageEvent): ReceiptContext {
+export function makeGeneric(from: string, data: MessageEvent): ListenContext {
     // A trivial hardcode -> retrieve -> execute block
     const handlers: { [from: string]: { [type: string]: MessageReceiver } } = {
         discourse: {
@@ -46,7 +46,7 @@ export function makeGeneric(from: string, data: MessageEvent): ReceiptContext {
  * Generate a specific emit object from a generic message object
  * @param data object to transform
  */
-export function makeSpecific(data: TransmitContext): ServiceEmitContext {
+export function makeSpecific(data: EmitContext): ServiceEmitContext {
     // A trivial hardcode -> retrieve -> execute block
     const converters: { [to: string]: { [type: string]: MessageTransmitter } } = {
         discourse: {
@@ -84,7 +84,7 @@ export function translateTrigger(trigger: string, service: string): string {
  * @param event received event
  * @param to destination of this event
  */
-export function initThreadHandleContext(event: ThreadReceiptContext, to: string): ThreadHandleContext {
+export function initThreadHandleContext(event: ThreadListenContext, to: string): ThreadHandleContext {
     return {
         action: event.action,
         origin: event.origin,
@@ -103,7 +103,7 @@ export function initThreadHandleContext(event: ThreadReceiptContext, to: string)
  * @param event received event
  * @param to destination of this event
  */
-export function initMessageHandleContext(event: MessageReceiptContext, to: string): MessageHandleContext {
+export function initMessageHandleContext(event: MessageListenContext, to: string): MessageHandleContext {
     return {
         action: event.action,
         origin: event.origin,
@@ -121,16 +121,16 @@ export function initMessageHandleContext(event: MessageReceiptContext, to: strin
  * Ensure that an object has accumulated all of its details
  * @param event candidate event for emitting
  */
-export function initTransmitContext(event: MessageHandleContext): MessageTransmitContext {
+export function initTransmitContext(event: MessageHandleContext): MessageEmitContext {
     event = _.clone(event);
-    return event as MessageTransmitContext;
+    return event as MessageEmitContext;
 }
 
 /**
  * Convert an event from the form the adapter enqueues into a more generic message event
  * @param data enqueued object, raw from the adapter
  */
-function fromDiscoursePost(data: ServiceEvent): MessageReceiptContext {
+function fromDiscoursePost(data: ServiceEvent): MessageListenContext {
     // Retrieve publicity indicators from the environment
     const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS).join('|\\');
     const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS).join('|\\');
@@ -164,7 +164,7 @@ function fromDiscoursePost(data: ServiceEvent): MessageReceiptContext {
  * Convert an event from the form the adapter enqueues into a more generic message event
  * @param data enqueued object, raw from the adapter
  */
-function fromDiscourseTopic(data: ServiceEvent): ThreadReceiptContext {
+function fromDiscourseTopic(data: ServiceEvent): ThreadListenContext {
     // Create and return the generic message event
     return {
         action: 'create',
@@ -186,7 +186,7 @@ function fromDiscourseTopic(data: ServiceEvent): ThreadReceiptContext {
  * Convert an event from the form the adapter enqueues into a more generic message event
  * @param data enqueued object, raw from the adapter
  */
-function fromFlowdockMessage(data: ServiceEvent): MessageReceiptContext {
+function fromFlowdockMessage(data: ServiceEvent): MessageListenContext {
     // Retrieve publicity indicators from the environment
     const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS).join('|\\');
     const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS).join('|\\');
@@ -222,7 +222,7 @@ function fromFlowdockMessage(data: ServiceEvent): MessageReceiptContext {
  * Convert an event from a generic message event into a form specific to the adapter
  * @param data generic form of the event
  */
-function toDiscourseMessage(data: MessageTransmitContext): DiscourseMessageEmitContext {
+function toDiscourseMessage(data: MessageEmitContext): DiscourseMessageEmitContext {
     // Retrieve publicity indicators from the environment
     const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
     const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
@@ -244,7 +244,7 @@ function toDiscourseMessage(data: MessageTransmitContext): DiscourseMessageEmitC
  * Convert an event from a generic message event into a form specific to the adapter
  * @param data generic form of the event
  */
-function toFlowdockMessage(data: MessageTransmitContext): FlowdockMessageEmitContext {
+function toFlowdockMessage(data: MessageEmitContext): FlowdockMessageEmitContext {
     // Retrieve publicity indicators from the environment
     const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
     const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
@@ -266,7 +266,7 @@ function toFlowdockMessage(data: MessageTransmitContext): FlowdockMessageEmitCon
  * Convert an event from a generic message event into a form specific to the adapter
  * @param data generic form of the event
  */
-function toFlowdockThread(data: ThreadTransmitContext): FlowdockMessageEmitContext {
+function toFlowdockThread(data: ThreadEmitContext): FlowdockMessageEmitContext {
     // Retrieve publicity indicators from the environment
     const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
     // Create and return the generic message event
