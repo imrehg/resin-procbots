@@ -10,17 +10,17 @@ import {
     ServiceEvent,
 } from '../services/service-types';
 import {
-    EmitContext,
-    ListenContext,
-    MessageEmitContext,
+    TransmitContext,
+    ReceiptContext,
+    MessageTransmitContext,
     MessageEvent,
     MessageHandleContext,
-    MessageListenContext,
+    MessageReceiptContext,
     MessageReceiver,
     MessageTransmitter,
-    ThreadEmitContext,
+    ThreadTransmitContext,
     ThreadHandleContext,
-    ThreadListenContext,
+    ThreadReceiptContext,
 } from './message-types';
 
 /**
@@ -28,7 +28,7 @@ import {
  * @param from source of the data
  * @param data object to transform
  */
-export function makeGeneric(from: string, data: MessageEvent): ListenContext {
+export function makeGeneric(from: string, data: MessageEvent): ReceiptContext {
     // A trivial hardcode -> retrieve -> execute block
     const handlers: { [from: string]: { [type: string]: MessageReceiver } } = {
         discourse: {
@@ -46,7 +46,7 @@ export function makeGeneric(from: string, data: MessageEvent): ListenContext {
  * Generate a specific emit object from a generic message object
  * @param data object to transform
  */
-export function makeSpecific(data: EmitContext): ServiceEmitContext {
+export function makeSpecific(data: TransmitContext): ServiceEmitContext {
     // A trivial hardcode -> retrieve -> execute block
     const converters: { [to: string]: { [type: string]: MessageTransmitter } } = {
         discourse: {
@@ -84,11 +84,11 @@ export function translateTrigger(trigger: string, service: string): string {
  * @param event received event
  * @param to destination of this event
  */
-export function initThreadHandleContext(event: ThreadListenContext, to: string): ThreadHandleContext {
+export function initThreadHandleContext(event: ThreadReceiptContext, to: string): ThreadHandleContext {
     return {
         action: event.action,
         origin: event.origin,
-        private: event.private,
+        hidden: event.hidden,
         source: event.source,
         sourceIds: event.sourceIds,
         text: event.text,
@@ -103,11 +103,11 @@ export function initThreadHandleContext(event: ThreadListenContext, to: string):
  * @param event received event
  * @param to destination of this event
  */
-export function initMessageHandleContext(event: MessageListenContext, to: string): MessageHandleContext {
+export function initMessageHandleContext(event: MessageReceiptContext, to: string): MessageHandleContext {
     return {
         action: event.action,
         origin: event.origin,
-        private: event.private,
+        hidden: event.hidden,
         source: event.source,
         sourceIds: event.sourceIds,
         text: event.text,
@@ -121,21 +121,21 @@ export function initMessageHandleContext(event: MessageListenContext, to: string
  * Ensure that an object has accumulated all of its details
  * @param event candidate event for emitting
  */
-export function initTransmitContext(event: MessageHandleContext): MessageEmitContext {
+export function initTransmitContext(event: MessageHandleContext): MessageTransmitContext {
     event = _.clone(event);
-    return event as MessageEmitContext;
+    return event as MessageTransmitContext;
 }
 
 /**
  * Convert an event from the form the adapter enqueues into a more generic message event
  * @param data enqueued object, raw from the adapter
  */
-function fromDiscoursePost(data: ServiceEvent): MessageListenContext {
+function fromDiscoursePost(data: ServiceEvent): MessageReceiptContext {
     // Retrieve publicity indicators from the environment
-    const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS).join('|\\');
-    const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS).join('|\\');
+    const publicSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS).join('|\\');
+    const hiddenSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS).join('|\\');
     // A regex that looks for publicity indicators, possibly inside [], and then doesn't capture them
-    const ignorePublic = `(?:\\[?(?:\\${pub}|\\${priv})\\]?)?`;
+    const ignorePublic = `(?:\\[?(?:\\${publicSymbols}|\\${hiddenSymbols})\\]?)?`;
     // Ignore the public indicator then capture non whitespace characters within literal parentheses
     const findSource = new RegExp(`^${ignorePublic}\\((\\S*)\\)`, 'i');
     // Ignore the public indicator and the source section then capture everything
@@ -147,7 +147,7 @@ function fromDiscoursePost(data: ServiceEvent): MessageListenContext {
     return {
         action: 'create',
         origin,
-        private: data.rawEvent.post_type === 4,
+        hidden: data.rawEvent.post_type === 4,
         source: 'discourse',
         sourceIds: {
             message: data.rawEvent.id,
@@ -164,12 +164,12 @@ function fromDiscoursePost(data: ServiceEvent): MessageListenContext {
  * Convert an event from the form the adapter enqueues into a more generic message event
  * @param data enqueued object, raw from the adapter
  */
-function fromDiscourseTopic(data: ServiceEvent): ThreadListenContext {
+function fromDiscourseTopic(data: ServiceEvent): ThreadReceiptContext {
     // Create and return the generic message event
     return {
         action: 'create',
         origin: data.source,
-        private: false,
+        hidden: false,
         source: data.source,
         sourceIds: {
             message: `topic_${data.rawEvent.id}`,
@@ -186,14 +186,14 @@ function fromDiscourseTopic(data: ServiceEvent): ThreadListenContext {
  * Convert an event from the form the adapter enqueues into a more generic message event
  * @param data enqueued object, raw from the adapter
  */
-function fromFlowdockMessage(data: ServiceEvent): MessageListenContext {
+function fromFlowdockMessage(data: ServiceEvent): MessageReceiptContext {
     // Retrieve publicity indicators from the environment
-    const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS).join('|\\');
-    const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS).join('|\\');
+    const publicSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS).join('|\\');
+    const hiddenSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS).join('|\\');
     // A regex that looks for the presence of a public indicator
-    const isPublic = new RegExp(`^\\[?\\${pub}\\]?`, 'i');
+    const isPublic = new RegExp(`^\\[?\\${publicSymbols}\\]?`, 'i');
     // A regex that looks for publicity indicators, possibly inside [], and then doesn't capture them
-    const ignorePublic = `(?:\\[?(?:\\${pub}|\\${priv})\\]?)?`;
+    const ignorePublic = `(?:\\[?(?:\\${publicSymbols}|\\${hiddenSymbols})\\]?)?`;
     // Ignore the public indicator then capture non whitespace characters within literal parentheses
     const findSource = new RegExp(`^${ignorePublic}\\((\\S*)\\)`, 'i');
     // Ignore the public indicator and the source section then capture everything
@@ -205,7 +205,7 @@ function fromFlowdockMessage(data: ServiceEvent): MessageListenContext {
     return {
         action: 'create',
         origin,
-        private: data.rawEvent.content.match(isPublic) === null,
+        hidden: data.rawEvent.content.match(isPublic) === null,
         source: data.source,
         sourceIds: {
             message: data.rawEvent.id,
@@ -222,13 +222,13 @@ function fromFlowdockMessage(data: ServiceEvent): MessageListenContext {
  * Convert an event from a generic message event into a form specific to the adapter
  * @param data generic form of the event
  */
-function toDiscourseMessage(data: MessageEmitContext): DiscourseMessageEmitContext {
+function toDiscourseMessage(data: MessageTransmitContext): DiscourseMessageEmitContext {
     // Retrieve publicity indicators from the environment
-    const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
-    const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
+    const publicSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
+    const hiddenSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
     // Build the content with the indicator and origin at the front
     const content =
-        `[${data.private ? priv : pub}](${data.origin})`
+        `[${data.hidden ? hiddenSymbols : publicSymbols}](${data.origin})`
         + data.text;
     // Create and return the generic message event
     return {
@@ -236,7 +236,7 @@ function toDiscourseMessage(data: MessageEmitContext): DiscourseMessageEmitConte
         api_username: data.toIds.user,
         raw: content,
         topic_id: data.toIds.thread,
-        whisper: data.private ? 'true' : 'false',
+        whisper: data.hidden ? 'true' : 'false',
     };
 }
 
@@ -244,13 +244,13 @@ function toDiscourseMessage(data: MessageEmitContext): DiscourseMessageEmitConte
  * Convert an event from a generic message event into a form specific to the adapter
  * @param data generic form of the event
  */
-function toFlowdockMessage(data: MessageEmitContext): FlowdockMessageEmitContext {
+function toFlowdockMessage(data: MessageTransmitContext): FlowdockMessageEmitContext {
     // Retrieve publicity indicators from the environment
-    const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
-    const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
+    const publicSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
+    const hiddenSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
     // Build the content with the indicator and origin at the front
     const content =
-        `[${data.private ? priv : pub}](${data.origin})`
+        `[${data.hidden ? hiddenSymbols : publicSymbols}](${data.origin})`
         + data.text;
     // Create and return the generic message event
     return {
@@ -266,12 +266,12 @@ function toFlowdockMessage(data: MessageEmitContext): FlowdockMessageEmitContext
  * Convert an event from a generic message event into a form specific to the adapter
  * @param data generic form of the event
  */
-function toFlowdockThread(data: ThreadEmitContext): FlowdockMessageEmitContext {
+function toFlowdockThread(data: ThreadTransmitContext): FlowdockMessageEmitContext {
     // Retrieve publicity indicators from the environment
-    const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
+    const publicSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
     // Create and return the generic message event
     return {
-        content: `[${pub}](${data.origin})${data.text}`,
+        content: `[${publicSymbols}](${data.origin})${data.text}`,
         event: 'message',
         external_user_name: data.toIds.user,
         flow: data.toIds.room,

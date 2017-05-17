@@ -4,10 +4,10 @@ import * as path from 'path';
 import * as request from 'request-promise';
 import {
     MessageEmitResponse,
-    ListenContext,
-    ThreadEmitContext,
+    ReceiptContext,
+    ThreadTransmitContext,
     ThreadEmitResponse,
-    MessageEmitContext,
+    MessageTransmitContext,
 } from '../utils/message-types';
 import {
     DiscourseMessageEmitContext,
@@ -30,7 +30,7 @@ export class DiscourseService extends MessageService implements ServiceListener,
     private topicCache = new Map<string, any>();
     private postsSynced = new Set<number>();
 
-    public fetchPrivateMessages(_event: ListenContext, _filter: RegExp): Promise<string[]> {
+    public fetchPrivateMessages(_event: ReceiptContext, _filter: RegExp): Promise<string[]> {
         throw new Error('Method not implemented.');
     }
 
@@ -39,7 +39,7 @@ export class DiscourseService extends MessageService implements ServiceListener,
      * @param event details to identify the event
      * @param filter regex of comments to match
      */
-    public fetchThread(event: ListenContext, filter: RegExp): Promise<string[]> {
+    public fetchThread(event: ReceiptContext, filter: RegExp): Promise<string[]> {
         // Check that the event being asked about orginated with us
         if (event.source !== this.serviceName) {
             return Promise.reject(new Error('Cannot get discourse thread from non-discourse event'));
@@ -66,7 +66,7 @@ export class DiscourseService extends MessageService implements ServiceListener,
         });
     }
 
-    protected createThread(_data: ThreadEmitContext): Promise<ThreadEmitResponse> {
+    protected createThread(_data: ThreadTransmitContext): Promise<ThreadEmitResponse> {
         throw new Error('Method not implemented.');
     }
 
@@ -134,7 +134,7 @@ export class DiscourseService extends MessageService implements ServiceListener,
      * Emit data to the API
      * @param data emit context
      */
-    protected createMessage(data: MessageEmitContext): Promise<MessageEmitResponse> {
+    protected createMessage(data: MessageTransmitContext): Promise<MessageEmitResponse> {
         // Extract a couple of details from out of the context
         const token = data.api_token;
         const username = data.api_username;

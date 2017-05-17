@@ -473,7 +473,7 @@ export class VersionBot extends ProcBot {
         this.logger.log(LogLevel.INFO, `Attempting merge for ${owner}/${repo}#${pr.number}`);
 
         // There is currently an issue with the Github API where PR reviews cannot be retrieved
-        // for private repositories. This means we can't check to ensure an APPROVED review exists
+        // for hidden repositories. This means we can't check to ensure an APPROVED review exists
         // before attempting to merge. It has been agreed that, instead, we will await for the
         // maintainer label to be applied instead.
         // The below code needs reinstating once Github fix their API.

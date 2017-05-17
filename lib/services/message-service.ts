@@ -8,17 +8,18 @@ import {
     LogLevel,
 } from '../utils/logger';
 import {
-    ListenContext,
-    MessageEmitContext,
+    ReceiptContext,
+    MessageTransmitContext,
     MessageEmitResponse,
     MessageEmitter,
     MessageEvent,
     MessageListener,
     MessageWorkerEvent,
-    ThreadEmitContext,
+    ThreadTransmitContext,
     ThreadEmitResponse,
 } from '../utils/message-types';
 import {
+    ServiceEmitContext,
     ServiceEmitRequest,
     ServiceEmitResponse,
     ServiceRegistration,
@@ -62,9 +63,9 @@ implements MessageListener, MessageEmitter {
         }
     }
 
-    public abstract fetchThread(event: ListenContext, filter: RegExp): Promise<string[]>;
+    public abstract fetchThread(event: ReceiptContext, filter: RegExp): Promise<string[]>;
 
-    public abstract fetchPrivateMessages(event: ListenContext, filter: RegExp): Promise<string[]>;
+    public abstract fetchPrivateMessages(event: ReceiptContext, filter: RegExp): Promise<string[]>;
 
     /**
      * Express an interest in a particular type of event
@@ -120,18 +121,7 @@ implements MessageListener, MessageEmitter {
      */
     protected abstract activateMessageListener(): void;
 
-    /**
-     * Emit data to the API
-     * @param data emit context
-     */
-    protected abstract createMessage(data: MessageEmitContext): Promise<MessageEmitResponse>
-
-    /**
-     * Emit data to the API
-     * @param data emit context
-     */
-    protected abstract createThread(data: ThreadEmitContext): Promise<ThreadEmitResponse>
-
+    //noinspection JSMethodCanBeStatic
     /**
      * Retrieve the scope for event order preservation
      * @param event details to examine
@@ -140,6 +130,7 @@ implements MessageListener, MessageEmitter {
         return event.cookedEvent.context;
     }
 
+    //noinspection JSMethodCanBeStatic
     /**
      * Retrieve the event type for event firing
      * @param event details to examine
@@ -153,12 +144,12 @@ implements MessageListener, MessageEmitter {
      * Bound to the object instance using =>
      */
     protected handleEvent = (event: MessageEvent): Promise<void> => {
-        // Retrieve and execute all the listener methods, nerfing their responses
+        // Retrieve and execute all the listener methods, squashing their responses
         const listeners = this._eventListeners[this.getEventTypeFromMessage(event)] || [];
         return Promise.map(listeners, (listener) => {
             return listener.listenerMethod(listener, event);
         }).return();
-    }
+    };
 
     /**
      * Retrieve or create a worker for an event
@@ -176,7 +167,7 @@ implements MessageListener, MessageEmitter {
             this.workers.set(context, created);
             return created;
         }
-    }
+    };
 
     /**
      * Instruct the child to start listening if we haven't already
