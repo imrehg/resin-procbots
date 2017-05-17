@@ -8,32 +8,22 @@ import {
     LogLevel,
 } from '../utils/logger';
 import {
-    ReceiptContext,
-    MessageTransmitContext,
-    MessageEmitResponse,
-    MessageEmitter,
-    MessageEvent,
-    MessageListener,
-    MessageWorkerEvent,
-    ThreadTransmitContext,
-    ThreadEmitResponse,
-} from '../utils/message-types';
-import {
-    ServiceEmitContext,
-    ServiceEmitRequest,
-    ServiceEmitResponse,
+    ServiceEmitter, ServiceListener,
     ServiceRegistration,
 } from './service-types';
+import {
+    MessageServiceEmitContext,
+    MessageServiceEmitRequest, MessageServiceEmitResponse, MessageServiceEvent,
+    MessageWorkerEvent
+} from "../utils/message-service-types";
 
 /**
  * Abstract class to define a common set of utilities and standards for all messenger classes
  */
-export abstract class MessageService
-extends WorkerClient<string|null>
-implements MessageListener, MessageEmitter {
-    protected static logger = new Logger();
+export abstract class MessageService extends WorkerClient<string|null> implements ServiceListener, ServiceEmitter {
+    private static _logger = new Logger();
     private static _app: express.Express;
-    private listening: boolean = false;
+    private _listening: boolean = false;
     private _eventListeners: { [event: string]: ServiceRegistration[] } = {};
 
     /**
@@ -49,8 +39,13 @@ implements MessageListener, MessageEmitter {
             MessageService._app = express();
             MessageService._app.use(bodyParser.json());
             MessageService._app.listen(port);
+            MessageService.logger.log(LogLevel.INFO, `---> Started express server on port ${port}`);
         }
         return MessageService._app;
+    }
+
+    protected static get logger(): Logger {
+        return MessageService._logger;
     }
 
     /**
@@ -62,10 +57,6 @@ implements MessageListener, MessageEmitter {
             this.listen();
         }
     }
-
-    public abstract fetchThread(event: ReceiptContext, filter: RegExp): Promise<string[]>;
-
-    public abstract fetchPrivateMessages(event: ReceiptContext, filter: RegExp): Promise<string[]>;
 
     /**
      * Express an interest in a particular type of event
@@ -87,16 +78,10 @@ implements MessageListener, MessageEmitter {
      * Emit data to the external service
      * @param data ServiceEmitRequest to parse
      */
-    public sendData(data: ServiceEmitRequest): Promise<ServiceEmitResponse> {
+    public sendData(data: MessageServiceEmitRequest): Promise<MessageServiceEmitResponse> {
         // Check the contexts for relevance before passing down the inheritance
         if (data.contexts[this.serviceName]) {
-            if (data.contexts[this.serviceName].type === 'message') {
-                return this.createMessage(data.contexts[this.serviceName]);
-            } else if (data.contexts[this.serviceName].type === 'thread') {
-                return this.createThread(data.contexts[this.serviceName]);
-            } else {
-                return Promise.reject(new Error(`Invalid ${this.serviceName} context`));
-            }
+            return this.sendPayload(data.contexts[this.serviceName])
         } else {
             // If we have a context to emit to this service, then no-op is correct resolution
             return Promise.resolve({
@@ -117,6 +102,12 @@ implements MessageListener, MessageEmitter {
     }
 
     /**
+     * Actually deliver the data to the API
+     * @param data
+     */
+    protected abstract sendPayload(data: MessageServiceEmitContext): Promise<MessageServiceEmitResponse>
+
+    /**
      * Activate this object as a listener
      */
     protected abstract activateMessageListener(): void;
@@ -126,7 +117,7 @@ implements MessageListener, MessageEmitter {
      * Retrieve the scope for event order preservation
      * @param event details to examine
      */
-    protected getWorkerContextFromMessage(event: MessageEvent): string {
+    protected getWorkerContextFromMessage(event: MessageServiceEvent): string {
         return event.cookedEvent.context;
     }
 
@@ -135,7 +126,7 @@ implements MessageListener, MessageEmitter {
      * Retrieve the event type for event firing
      * @param event details to examine
      */
-    protected getEventTypeFromMessage(event: MessageEvent): string {
+    protected getEventTypeFromMessage(event: MessageServiceEvent): string {
         return event.cookedEvent.type;
     }
 
@@ -143,7 +134,7 @@ implements MessageListener, MessageEmitter {
      * Handle an event once it's turn in the queue comes round
      * Bound to the object instance using =>
      */
-    protected handleEvent = (event: MessageEvent): Promise<void> => {
+    protected handleEvent = (event: MessageServiceEvent): Promise<void> => {
         // Retrieve and execute all the listener methods, squashing their responses
         const listeners = this._eventListeners[this.getEventTypeFromMessage(event)] || [];
         return Promise.map(listeners, (listener) => {
@@ -173,8 +164,8 @@ implements MessageListener, MessageEmitter {
      * Instruct the child to start listening if we haven't already
      */
     private listen() {
-        if (!this.listening) {
-            this.listening = true;
+        if (!this._listening) {
+            this._listening = true;
             this.activateMessageListener();
             MessageService.logger.log(LogLevel.INFO, `---> Started '${this.serviceName}' listener`);
         }

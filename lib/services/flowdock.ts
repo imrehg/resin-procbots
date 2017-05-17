@@ -23,26 +23,24 @@ import * as path from 'path';
 import * as request from 'request-promise';
 import {
     FlowdockMessage,
-    FlowdockMessageEmitContext,
-} from '../services/flowdock-types';
-import {
-    MessageEmitResponse,
-    ReceiptContext, MessageTransmitContext,
-} from '../utils/message-types';
+} from './flowdock-types';
 import {
     MessageService
 } from './message-service';
 import {
     ServiceEmitter,
-    ServiceListener
-    ServiceEmitContext,,
+    ServiceListener,
 } from './service-types';
+import { ReceiptContext } from "../utils/message-handler-types";
+import { MessageServiceEmitContext, MessageServiceEmitResponse } from "../utils/message-service-types";
+import { MessageFetcher } from "../utils/message-fetcher-types";
+import {MessageConverter} from "../utils/message-convertor-types";
 
 /**
  * Class for interacting with the Discourse API
  * Is a MessageService, ServiceListener and ServiceEmitter
  */
-export class FlowdockService extends MessageService implements ServiceEmitter, ServiceListener {
+export class FlowdockService extends MessageService implements ServiceEmitter, ServiceListener, MessageFetcher {
     private static session = new Session(process.env.FLOWDOCK_LISTENER_ACCOUNT_API_TOKEN);
     private static _serviceName = path.basename(__filename.split('.')[0]);
     private flowIdToFlowName = new Map<string, string>();
@@ -53,7 +51,7 @@ export class FlowdockService extends MessageService implements ServiceEmitter, S
      * @param filter regex of comments to match
      */
     public fetchThread(event: ReceiptContext, filter: RegExp): Promise<string[]> {
-        // Check that the event being asked about orginated with us
+        // Check that the event being asked about originated with us
         if (event.source !== this.serviceName) {
             return Promise.reject(new Error('Cannot get flowdock thread from non-flowdock event'));
         }
@@ -98,7 +96,7 @@ export class FlowdockService extends MessageService implements ServiceEmitter, S
      * @param filter optional criteria that must be met
      */
     public fetchPrivateMessages(event: ReceiptContext, filter: RegExp): Promise<string[]> {
-        // Check that the event being asked about orginated with us
+        // Check that the event being asked about originated with us
         if (event.source !== this.serviceName) {
             return Promise.reject(new Error('Cannot get flowdock thread from non-flowdock event'));
         }
@@ -175,11 +173,12 @@ export class FlowdockService extends MessageService implements ServiceEmitter, S
         });
     }
 
+    //noinspection JSUnusedGlobalSymbols
     /**
      * Emit data to the API
      * @param data emit context
      */
-    protected createMessage(data: ServiceEmitContext): Promise<MessageEmitResponse> {
+    protected sendPayload(data: MessageServiceEmitContext): Promise<MessageServiceEmitResponse> {
         // Extract a couple of details from the environment
         const org = process.env.FLOWDOCK_ORGANIZATION_PARAMETERIZED_NAME;
         const token = new Buffer(process.env.FLOWDOCK_LISTENER_ACCOUNT_API_TOKEN).toString('base64');
@@ -215,6 +214,33 @@ export class FlowdockService extends MessageService implements ServiceEmitter, S
     }
 }
 
+class FlowdockConverter implements MessageConverter {
+    convertMessageForEmit(data: MessageTransmitContext): MessageServiceEmitRequest {
+        throw new Error("Method not implemented.");
+    }
+
+    convertThreadForEmit(data: ThreadTransmitContext): MessageServiceEmitRequest {
+        throw new Error("Method not implemented.");
+    }
+
+    convertReceivedThread(data: MessageWorkerEvent): MessageReceiptContext {
+        throw new Error("Method not implemented.");
+    }
+
+    convertReceivedMessage(data: MessageWorkerEvent): ThreadReceiptContext {
+        throw new Error("Method not implemented.");
+    }
+
+    convertTypeForRegistration(data: MessageEventType): string {
+        return data;
+    }
+
+    convertReceivedType(data: string): MessageEventType {
+        return data;
+    }
+
+}
+
 /**
  * Return this class activated and typed as a listener
  */
@@ -234,4 +260,15 @@ export function createServiceEmitter(): ServiceEmitter {
  */
 export function createMessageService(): MessageService {
     return new FlowdockService(false);
+}
+
+/**
+ * Return this class typed as a messenger
+ */
+export function createMessageFetcher(): MessageFetcher {
+    return new FlowdockService(false);
+}
+
+export function createMessageConverter(): MessageConverter {
+    return new FlowdockConverter();
 }

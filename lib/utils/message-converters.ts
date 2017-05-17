@@ -13,7 +13,7 @@ import {
     TransmitContext,
     ReceiptContext,
     MessageTransmitContext,
-    MessageEvent,
+    MessageServiceEvent,
     MessageHandleContext,
     MessageReceiptContext,
     MessageReceiver,
@@ -28,7 +28,7 @@ import {
  * @param from source of the data
  * @param data object to transform
  */
-export function makeGeneric(from: string, data: MessageEvent): ReceiptContext {
+export function makeGeneric(from: string, data: MessengerEvent): ReceiptContext {
     // A trivial hardcode -> retrieve -> execute block
     const handlers: { [from: string]: { [type: string]: MessageReceiver } } = {
         discourse: {

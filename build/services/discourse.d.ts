@@ -1,18 +1,19 @@
 import * as Promise from 'bluebird';
-import { MessageEmitResponse, ReceiptContext } from '../utils/message-types';
-import { DiscourseMessageEmitContext } from './discourse-types';
-import { MessageService } from './message-service';
+import { MessageEmitResponse, ReceiptContext, ThreadTransmitContext, ThreadEmitResponse, MessageTransmitContext } from '../utils/message-types';
+import { Messenger } from './messenger';
 import { ServiceEmitter, ServiceListener } from './service-types';
-export declare class DiscourseService extends MessageService implements ServiceListener, ServiceEmitter {
+export declare class DiscourseService extends Messenger implements ServiceListener, ServiceEmitter {
     private static _serviceName;
     private topicCache;
     private postsSynced;
+    fetchPrivateMessages(_event: ReceiptContext, _filter: RegExp): Promise<string[]>;
     fetchThread(event: ReceiptContext, filter: RegExp): Promise<string[]>;
+    protected createThread(_data: ThreadTransmitContext): Promise<ThreadEmitResponse>;
     protected activateMessageListener(): void;
-    protected sendMessage(data: DiscourseMessageEmitContext): Promise<MessageEmitResponse>;
+    protected createMessage(data: MessageTransmitContext): Promise<MessageEmitResponse>;
     private fetchTopic(topicId);
     readonly serviceName: string;
 }
 export declare function createServiceListener(): ServiceListener;
 export declare function createServiceEmitter(): ServiceEmitter;
-export declare function createMessageService(): MessageService;
+export declare function createMessageService(): Messenger;

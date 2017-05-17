@@ -5,8 +5,8 @@ const flowdock_1 = require("flowdock");
 const _ = require("lodash");
 const path = require("path");
 const request = require("request-promise");
-const message_service_1 = require("./message-service");
-class FlowdockService extends message_service_1.MessageService {
+const messenger_1 = require("./messenger");
+class FlowdockService extends messenger_1.Messenger {
     constructor() {
         super(...arguments);
         this.flowIdToFlowName = new Map();
@@ -94,21 +94,21 @@ class FlowdockService extends message_service_1.MessageService {
                 }
             });
         });
-        message_service_1.MessageService.app.get(`/${this.serviceName}/`, (_formData, response) => {
+        messenger_1.Messenger.app.get(`/${this.serviceName}/`, (_formData, response) => {
             response.send('ok');
         });
     }
-    sendMessage(body) {
+    createMessage(data) {
         const org = process.env.FLOWDOCK_ORGANIZATION_PARAMETERIZED_NAME;
         const token = new Buffer(process.env.FLOWDOCK_LISTENER_ACCOUNT_API_TOKEN).toString('base64');
         const requestOpts = {
-            body,
+            data,
             headers: {
                 'Authorization': `Basic ${token}`,
                 'X-flowdock-wait-for-message': true,
             },
             json: true,
-            url: `https://api.flowdock.com/flows/${org}/${body.flow}/messages/`,
+            url: `https://api.flowdock.com/flows/${org}/${data.flow}/messages/`,
         };
         return request.post(requestOpts).then((resData) => {
             return {

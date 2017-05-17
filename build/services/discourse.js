@@ -4,12 +4,15 @@ const Promise = require("bluebird");
 const _ = require("lodash");
 const path = require("path");
 const request = require("request-promise");
-const message_service_1 = require("./message-service");
-class DiscourseService extends message_service_1.MessageService {
+const messenger_1 = require("./messenger");
+class DiscourseService extends messenger_1.Messenger {
     constructor() {
         super(...arguments);
         this.topicCache = new Map();
         this.postsSynced = new Set();
+    }
+    fetchPrivateMessages(_event, _filter) {
+        throw new Error('Method not implemented.');
     }
     fetchThread(event, filter) {
         if (event.source !== this.serviceName) {
@@ -33,8 +36,11 @@ class DiscourseService extends message_service_1.MessageService {
             });
         });
     }
+    createThread(_data) {
+        throw new Error('Method not implemented.');
+    }
     activateMessageListener() {
-        message_service_1.MessageService.app.post(`/${this.serviceName}/`, (formData, response) => {
+        messenger_1.Messenger.app.post(`/${this.serviceName}/`, (formData, response) => {
             if (this.postsSynced.has(formData.body.post.id)) {
                 response.send();
             }
@@ -86,7 +92,7 @@ class DiscourseService extends message_service_1.MessageService {
             }
         });
     }
-    sendMessage(data) {
+    createMessage(data) {
         const token = data.api_token;
         const username = data.api_username;
         const body = _.clone(data);

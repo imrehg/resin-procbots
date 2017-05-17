@@ -44,7 +44,7 @@ function initThreadHandleContext(event, to) {
     return {
         action: event.action,
         origin: event.origin,
-        private: event.private,
+        hidden: event.hidden,
         source: event.source,
         sourceIds: event.sourceIds,
         text: event.text,
@@ -58,7 +58,7 @@ function initMessageHandleContext(event, to) {
     return {
         action: event.action,
         origin: event.origin,
-        private: event.private,
+        hidden: event.hidden,
         source: event.source,
         sourceIds: event.sourceIds,
         text: event.text,
@@ -74,9 +74,9 @@ function initTransmitContext(event) {
 }
 exports.initTransmitContext = initTransmitContext;
 function fromDiscoursePost(data) {
-    const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS).join('|\\');
-    const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS).join('|\\');
-    const ignorePublic = `(?:\\[?(?:\\${pub}|\\${priv})\\]?)?`;
+    const publicSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS).join('|\\');
+    const hiddenSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS).join('|\\');
+    const ignorePublic = `(?:\\[?(?:\\${publicSymbols}|\\${hiddenSymbols})\\]?)?`;
     const findSource = new RegExp(`^${ignorePublic}\\((\\S*)\\)`, 'i');
     const findContent = new RegExp(`^${ignorePublic}(?:\\(\\S*\\))?\\s?([\\s\\S]*)$`, 'i');
     const sourceArray = data.rawEvent.raw.match(findSource);
@@ -84,7 +84,7 @@ function fromDiscoursePost(data) {
     return {
         action: 'create',
         origin,
-        private: data.rawEvent.post_type === 4,
+        hidden: data.rawEvent.post_type === 4,
         source: 'discourse',
         sourceIds: {
             message: data.rawEvent.id,
@@ -100,7 +100,7 @@ function fromDiscourseTopic(data) {
     return {
         action: 'create',
         origin: data.source,
-        private: false,
+        hidden: false,
         source: data.source,
         sourceIds: {
             message: `topic_${data.rawEvent.id}`,
@@ -113,10 +113,10 @@ function fromDiscourseTopic(data) {
     };
 }
 function fromFlowdockMessage(data) {
-    const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS).join('|\\');
-    const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS).join('|\\');
-    const isPublic = new RegExp(`^\\[?\\${pub}\\]?`, 'i');
-    const ignorePublic = `(?:\\[?(?:\\${pub}|\\${priv})\\]?)?`;
+    const publicSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS).join('|\\');
+    const hiddenSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS).join('|\\');
+    const isPublic = new RegExp(`^\\[?\\${publicSymbols}\\]?`, 'i');
+    const ignorePublic = `(?:\\[?(?:\\${publicSymbols}|\\${hiddenSymbols})\\]?)?`;
     const findSource = new RegExp(`^${ignorePublic}\\((\\S*)\\)`, 'i');
     const findContent = new RegExp(`^${ignorePublic}(?:\\(\\S*\\))?\\s?([\\s\\S]*)$`, 'i');
     const sourceArray = data.rawEvent.content.match(findSource);
@@ -124,7 +124,7 @@ function fromFlowdockMessage(data) {
     return {
         action: 'create',
         origin,
-        private: data.rawEvent.content.match(isPublic) === null,
+        hidden: data.rawEvent.content.match(isPublic) === null,
         source: data.source,
         sourceIds: {
             message: data.rawEvent.id,
@@ -137,22 +137,22 @@ function fromFlowdockMessage(data) {
     };
 }
 function toDiscourseMessage(data) {
-    const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
-    const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
-    const content = `[${data.private ? priv : pub}](${data.origin})`
+    const publicSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
+    const hiddenSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
+    const content = `[${data.hidden ? hiddenSymbols : publicSymbols}](${data.origin})`
         + data.text;
     return {
         api_token: data.toIds.token,
         api_username: data.toIds.user,
         raw: content,
         topic_id: data.toIds.thread,
-        whisper: data.private ? 'true' : 'false',
+        whisper: data.hidden ? 'true' : 'false',
     };
 }
 function toFlowdockMessage(data) {
-    const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
-    const priv = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
-    const content = `[${data.private ? priv : pub}](${data.origin})`
+    const publicSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
+    const hiddenSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
+    const content = `[${data.hidden ? hiddenSymbols : publicSymbols}](${data.origin})`
         + data.text;
     return {
         content,
@@ -163,9 +163,9 @@ function toFlowdockMessage(data) {
     };
 }
 function toFlowdockThread(data) {
-    const pub = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
+    const publicSymbols = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
     return {
-        content: `[${pub}](${data.origin})${data.text}`,
+        content: `[${publicSymbols}](${data.origin})${data.text}`,
         event: 'message',
         external_user_name: data.toIds.user,
         flow: data.toIds.room,

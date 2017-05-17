@@ -68,7 +68,7 @@ class SyncBot extends procbot_1.ProcBot {
         const fromEvent = {
             action: 'create',
             origin: 'system',
-            private: true,
+            hidden: true,
             source: 'system',
             sourceIds: {
                 message: '',
@@ -109,7 +109,7 @@ class SyncBot extends procbot_1.ProcBot {
         const toEvent = {
             action: 'create',
             origin: 'system',
-            private: true,
+            hidden: true,
             source: 'system',
             sourceIds: {
                 message: '',
@@ -128,7 +128,7 @@ class SyncBot extends procbot_1.ProcBot {
         const fromEvent = {
             action: 'create',
             origin: 'system',
-            private: true,
+            hidden: true,
             source: 'system',
             sourceIds: {
                 message: '',
