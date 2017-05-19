@@ -1,21 +1,25 @@
 import * as Promise from 'bluebird';
-import { FlowdockHandle, FlowdockMessageEmitContext } from '../services/flowdock-types';
-import { MessageEmitResponse, MessageEvent, MessageWorkerEvent, ReceiptContext } from '../utils/message-types';
+import { DataHub, MessengerEmitResponse, MessengerEvent, ReceiptContext, TransmitContext } from '../utils/message-types';
+import { FlowdockEmitContext, FlowdockHandle } from './flowdock-types';
 import { MessageService } from './message-service';
 import { ServiceEmitter, ServiceListener } from './service-types';
-export declare class FlowdockService extends MessageService implements ServiceEmitter, ServiceListener {
-    private static session;
+export declare class FlowdockService extends MessageService implements ServiceEmitter, ServiceListener, DataHub {
     private static _serviceName;
-    private flowIdToFlowName;
-    fetchThread(event: ReceiptContext, filter: RegExp): Promise<string[]>;
-    fetchPrivateMessages(event: ReceiptContext, filter: RegExp): Promise<string[]>;
+    private static session;
+    makeGeneric(data: MessengerEvent): Promise<ReceiptContext>;
+    makeSpecific(data: TransmitContext): Promise<FlowdockEmitContext>;
+    translateEventName(eventType: string): string;
+    fetchNotes(thread: string, room: string, filter: RegExp): Promise<string[]>;
+    fetchValue(user: string, key: string): Promise<string>;
     protected activateMessageListener(): void;
-    protected getWorkerContextFromMessage(event: MessageWorkerEvent): string;
-    protected getEventTypeFromMessage(event: MessageEvent): string;
-    protected sendMessage(body: FlowdockMessageEmitContext): Promise<MessageEmitResponse>;
+    protected sendPayload(data: FlowdockEmitContext): Promise<MessengerEmitResponse>;
+    private fetchPrivateMessages(username, filter);
+    private fetchUserId(username);
+    private fetchFromSession(path);
     readonly serviceName: string;
     readonly apiHandle: FlowdockHandle;
 }
 export declare function createServiceListener(): ServiceListener;
 export declare function createServiceEmitter(): ServiceEmitter;
 export declare function createMessageService(): MessageService;
+export declare function createDataHub(): DataHub;

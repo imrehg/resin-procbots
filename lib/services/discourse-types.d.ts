@@ -1,16 +1,46 @@
-import {
-    ServiceEmitContext,
-} from './service-types';
+/*
+ Copyright 2016-2017 Resin.io
 
-export interface DiscourseMessageEmitContext extends ServiceEmitContext {
-    raw: string;
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ */
+
+import { DiscourseService } from './discourse';
+import { ServiceAPIHandle, ServiceEmitContext } from './service-types';
+
+export interface DiscoursePostEmitContext extends ServiceEmitContext {
     api_username: string;
     api_token: string;
-    whisper: 'true' | 'false';
-    topic_id?: string;
+    raw: string;
+    whisper: 'true'|'false';
+    type: 'post';
+    topic_id: string;
+}
+
+export interface DiscourseTopicEmitContext extends ServiceEmitContext {
+    api_username: string;
+    api_token: string;
+    category: string;
+    unlist_topic: 'true'|'false';
+    raw: string;
+    title: string;
+    type: 'topic';
 }
 
 export interface DiscoursePost {
     cooked: string;
     [key: string]: string;
+}
+
+export interface DiscourseHandle extends ServiceAPIHandle {
+    discourse: DiscourseService;
 }

@@ -8,13 +8,80 @@ const message_service_1 = require("./message-service");
 class DiscourseService extends message_service_1.MessageService {
     constructor() {
         super(...arguments);
-        this.topicCache = new Map();
         this.postsSynced = new Set();
     }
-    fetchThread(event, filter) {
-        if (event.source !== this.serviceName) {
-            return Promise.reject(new Error('Cannot get discourse thread from non-discourse event'));
+    makeGeneric(data) {
+        const getGeneric = {
+            json: true,
+            method: 'GET',
+            qs: {
+                api_key: process.env.DISCOURSE_LISTENER_ACCOUNT_API_TOKEN,
+                api_username: process.env.DISCOURSE_LISTENER_ACCOUNT_USERNAME,
+            },
+            uri: `https://${process.env.DISCOURSE_INSTANCE_URL}`,
+        };
+        const getPost = _.cloneDeep(getGeneric);
+        getPost.uri += `/posts/${data.rawEvent.id}`;
+        const getTopic = _.cloneDeep(getGeneric);
+        getTopic.uri += `/t/${data.rawEvent.topic_id}`;
+        return Promise.props({
+            post: request(getPost),
+            topic: request(getTopic),
+        })
+            .then((details) => {
+            const metadata = message_service_1.MessageService.extractMetadata(details.post.raw);
+            const first = details.post.post_number === 1;
+            return {
+                action: 'create',
+                first,
+                genesis: metadata.genesis || data.source,
+                hidden: first ? !details.topic.visible : details.post.post_type === 4,
+                source: 'discourse',
+                sourceIds: {
+                    flow: details.topic.category_id.toString(),
+                    message: details.post.id.toString(),
+                    thread: details.post.topic_id.toString(),
+                    url: getTopic.uri,
+                    user: details.post.username,
+                },
+                text: metadata.content,
+                title: details.topic.title,
+            };
+        });
+    }
+    makeSpecific(data) {
+        const topicId = data.toIds.thread;
+        if (!topicId) {
+            const title = data.title;
+            if (!title) {
+                throw new Error('Cannot create Discourse Thread without a title');
+            }
+            return Promise.resolve({
+                api_token: data.toIds.token,
+                api_username: data.toIds.user,
+                category: data.toIds.flow,
+                raw: data.text + '\n\n---\n' + message_service_1.MessageService.stringifyMetadata(data),
+                title,
+                type: 'topic',
+                unlist_topic: data.hidden ? 'true' : 'false',
+            });
         }
+        return Promise.resolve({
+            api_token: data.toIds.token,
+            api_username: data.toIds.user,
+            raw: data.text + '\n\n---\n' + message_service_1.MessageService.stringifyMetadata(data),
+            topic_id: topicId,
+            type: 'post',
+            whisper: data.hidden ? 'true' : 'false',
+        });
+    }
+    translateEventName(eventType) {
+        const equivalents = {
+            message: 'post',
+        };
+        return equivalents[eventType];
+    }
+    fetchNotes(thread, _room, filter) {
         const getThread = {
             json: true,
             method: 'GET',
@@ -22,10 +89,10 @@ class DiscourseService extends message_service_1.MessageService {
                 api_key: process.env.DISCOURSE_LISTENER_ACCOUNT_API_TOKEN,
                 api_username: process.env.DISCOURSE_LISTENER_ACCOUNT_USERNAME,
             },
-            uri: `https://${process.env.DISCOURSE_INSTANCE_URL}/t/${event.sourceIds.thread}`,
+            uri: `https://${process.env.DISCOURSE_INSTANCE_URL}/t/${thread}`,
         };
-        return request(getThread).then((thread) => {
-            return _.map(thread.post_stream.posts, (item) => {
+        return request(getThread).then((threadObject) => {
+            return _.map(threadObject.post_stream.posts, (item) => {
                 return item.cooked;
             }).filter((value) => {
                 const match = value.match(filter);
@@ -35,109 +102,49 @@ class DiscourseService extends message_service_1.MessageService {
     }
     activateMessageListener() {
         message_service_1.MessageService.app.post(`/${this.serviceName}/`, (formData, response) => {
-            if (this.postsSynced.has(formData.body.post.id)) {
-                response.send();
-            }
-            else {
+            if (!this.postsSynced.has(formData.body.post.id)) {
                 this.postsSynced.add(formData.body.post.id);
-                this.fetchTopic(formData.body.post.topic_id)
-                    .then((topic) => {
-                    if (formData.body.post.post_number === 1) {
-                        const topicEvent = {
-                            data: {
-                                cookedEvent: {
-                                    context: topic.id,
-                                    type: 'topic',
-                                },
-                                rawEvent: topic,
-                                source: this.serviceName,
-                            },
-                            workerMethod: this.handleEvent,
-                        };
-                        this.queueEvent(topicEvent);
-                    }
-                    const getPost = {
-                        json: true,
-                        method: 'GET',
-                        qs: {
-                            api_key: process.env.DISCOURSE_LISTENER_ACCOUNT_API_TOKEN,
-                            api_username: process.env.DISCOURSE_LISTENER_ACCOUNT_USERNAME,
+                this.queueEvent({
+                    data: {
+                        cookedEvent: {
+                            context: formData.body.post.topic_id,
+                            type: 'post',
                         },
-                        uri: `https://${process.env.DISCOURSE_INSTANCE_URL}/posts/${formData.body.post.id}`,
-                    };
-                    request(getPost)
-                        .then((post) => {
-                        const postEvent = {
-                            data: {
-                                cookedEvent: {
-                                    category: topic.category_id,
-                                    context: topic.id,
-                                    type: formData.headers['x-discourse-event-type'],
-                                },
-                                rawEvent: post,
-                                source: this.serviceName,
-                            },
-                            workerMethod: this.handleEvent,
-                        };
-                        this.queueEvent(postEvent);
-                    });
+                        rawEvent: formData.body.post,
+                        source: this.serviceName,
+                    },
+                    workerMethod: this.handleEvent,
                 });
-                response.send();
             }
+            response.send();
         });
     }
-    sendMessage(data) {
-        const token = data.api_token;
-        const username = data.api_username;
+    sendPayload(data) {
         const body = _.clone(data);
         delete body.api_token;
         delete body.api_username;
-        const postPost = {
+        const requestOptions = {
             body,
             json: true,
-            url: `https://${process.env.DISCOURSE_INSTANCE_URL}/posts?api_key=${token}&api_username=${username}`
+            qs: { api_key: data.api_token, api_username: data.api_username },
+            url: `https://${process.env.DISCOURSE_INSTANCE_URL}/posts`
         };
-        return request.post(postPost).then((resData) => {
+        return request.post(requestOptions).then((resData) => {
             return {
                 response: {
-                    ids: {
-                        message: resData.id,
-                        thread: resData.topic_id,
-                    }
+                    message: resData.id,
+                    thread: resData.topic_id,
+                    url: `https://${process.env.DISCOURSE_INSTANCE_URL}/t/${resData.topic_id}`
                 },
                 source: this.serviceName,
             };
         });
     }
-    getWorkerContextFromMessage(event) {
-        return event.data.cookedEvent.context;
-    }
-    getEventTypeFromMessage(event) {
-        return event.cookedEvent.type;
-    }
-    fetchTopic(topicId) {
-        if (this.topicCache.has(topicId)) {
-            return Promise.resolve(this.topicCache.get(topicId));
-        }
-        else {
-            const token = process.env.DISCOURSE_LISTENER_ACCOUNT_API_TOKEN;
-            const username = process.env.DISCOURSE_LISTENER_ACCOUNT_USERNAME;
-            const rootUrl = process.env.DISCOURSE_INSTANCE_URL;
-            const requestOpts = {
-                json: true,
-                url: `https://${rootUrl}/t/${topicId}?api_key=${token}&api_username=${username}`
-            };
-            return request.get(requestOpts).then((resData) => {
-                this.topicCache.set(topicId, resData);
-                return resData;
-            });
-        }
-    }
     get serviceName() {
         return DiscourseService._serviceName;
     }
     get apiHandle() {
-        return;
+        return { discourse: this };
     }
 }
 DiscourseService._serviceName = path.basename(__filename.split('.')[0]);

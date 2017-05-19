@@ -3,92 +3,93 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const Promise = require("bluebird");
 const _ = require("lodash");
 const procbot_1 = require("../framework/procbot");
+const message_service_1 = require("../services/message-service");
 const logger_1 = require("../utils/logger");
-const message_converters_1 = require("../utils/message-converters");
 class SyncBot extends procbot_1.ProcBot {
     constructor(name = 'SyncBot') {
         super(name);
         this.messengers = new Map();
-        this.rooms = JSON.parse(process.env.SYNCBOT_ROOMS_TO_SYNCHRONISE);
-        this.genericAccounts = JSON.parse(process.env.SYNCBOT_GENERIC_AUTHOR_ACCOUNTS);
-        this.systemAccounts = JSON.parse(process.env.SYNCBOT_SYSTEM_MESSAGE_ACCOUNTS);
-        for (const event of JSON.parse(process.env.SYNCBOT_EVENTS_TO_SYNCHRONISE)) {
-            this.register(event.from, event.to, event.event);
+        const mappings = JSON.parse(process.env.SYNCBOT_MAPPINGS);
+        for (const mapping of mappings) {
+            let priorFlow = null;
+            for (const focusFlow of mapping) {
+                if (priorFlow) {
+                    this.register(priorFlow, focusFlow);
+                    this.register(focusFlow, priorFlow);
+                }
+                priorFlow = focusFlow;
+            }
         }
+        const hub = require(`../services/${process.env.SYNCBOT_HUB_SERVICE}`);
+        this.hub = hub.createDataHub();
     }
-    register(from, to, type) {
-        this.addServiceListener(from);
-        const listener = this.getListener(from);
-        this.addServiceEmitter(to);
+    register(from, to) {
+        this.addServiceListener(from.service);
+        this.addServiceEmitter(from.service);
+        const listener = this.getListener(from.service);
+        this.addServiceEmitter(to.service);
         if (listener) {
             listener.registerEvent({
-                events: [message_converters_1.translateTrigger(type, from)],
+                events: [this.getMessageService(from.service).translateEventName('message')],
                 listenerMethod: this.createRouter(from, to),
-                name: `${from}_${to}_${type}`,
+                name: `${from.service}:${from.flow}=>${to.service}:${to.flow}`,
             });
         }
     }
     createRouter(from, to) {
         return (_registration, data) => {
-            const generic = message_converters_1.makeGeneric(from, data);
-            if (_.intersection([generic.source, generic.genesis], ['system', to]).length === 0) {
-                if (generic.type === 'thread') {
-                    return this.handleThread(message_converters_1.initThreadHandleContext(generic, to));
+            return this.getMessageService(from.service).makeGeneric(data).then((generic) => {
+                if (generic.sourceIds.flow === from.flow
+                    && _.intersection([generic.source, generic.genesis], ['system', to.service]).length === 0) {
+                    const event = message_service_1.MessageService.initHandleContext(generic, to.service, { flow: to.flow });
+                    return this.useConnected(event, 'thread')
+                        .then(() => {
+                        this.useProvided(event, 'user')
+                            .then(() => this.useHubOrGeneric(event, 'token'))
+                            .then(() => this.create(event, 'comment'))
+                            .then(() => this.logSuccess(event, 'comment'))
+                            .catch((error) => this.handleError(error, event));
+                    })
+                        .catch(() => {
+                        this.useProvided(event, 'user')
+                            .then(() => this.useHubOrGeneric(event, 'token'))
+                            .then(() => this.create(event, 'comment'))
+                            .then(() => this.createConnection(event, 'thread'))
+                            .then(() => this.logSuccess(event, 'comment'))
+                            .catch((error) => this.handleError(error, event));
+                    });
                 }
-                else if (generic.type === 'message') {
-                    return this.handleMessage(message_converters_1.initMessageHandleContext(generic, to));
-                }
-                return Promise.reject(new Error('Event type not understood'));
-            }
-            return Promise.resolve();
+                return Promise.resolve();
+            });
         };
     }
-    handleThread(event) {
-        return this.searchPairs(event, 'room')
-            .then(() => this.searchPrivateExistingOrGeneric(event, 'user'))
-            .then(() => this.searchPrivateOrGeneric(event, 'token'))
-            .then(() => this.create(event, 'thread'))
-            .then(() => this.createConnection(event, 'thread'))
-            .then(() => this.logSuccess(event))
-            .catch((error) => this.handleError(error, event));
-    }
-    handleMessage(event) {
-        return this.searchHistory(event, 'thread')
-            .then(() => {
-            this.searchPairs(event, 'room')
-                .then(() => this.searchPrivateExistingOrGeneric(event, 'user'))
-                .then(() => this.searchPrivateOrGeneric(event, 'token'))
-                .then(() => this.create(event, 'message'))
-                .then(() => this.logSuccess(event))
-                .catch((error) => this.handleError(error, event));
-        })
-            .catch(() => { });
-    }
     handleError(error, event) {
+        this.logger.log(logger_1.LogLevel.WARN, error.message);
+        this.logger.log(logger_1.LogLevel.WARN, JSON.stringify(event));
         const fromEvent = {
             action: 'create',
+            first: false,
             genesis: 'system',
-            private: true,
+            hidden: true,
             source: 'system',
             sourceIds: {
+                flow: '',
                 message: '',
-                room: '',
                 thread: '',
                 user: '',
             },
-            text: error.message,
+            text: `${event.to} reports \`${error.message}\``,
             to: event.source,
             toIds: {
-                room: event.sourceIds.room,
+                flow: event.sourceIds.flow,
                 thread: event.sourceIds.thread,
             },
-            type: 'message',
         };
-        this.searchSystem(fromEvent, 'user')
-            .then(() => this.searchSystem(fromEvent, 'token'))
-            .then(() => this.create(fromEvent, 'message'))
-            .then(() => this.logSuccess(fromEvent))
-            .catch((err) => this.logError(event, err.message));
+        this.useSystem(fromEvent, 'user')
+            .then(() => this.useSystem(fromEvent, 'token'))
+            .then(() => this.create(fromEvent, 'comment'))
+            .then(() => this.logSuccess(fromEvent, 'comment'))
+            .catch((err) => this.logError(err, event));
     }
     getMessageService(key, data) {
         const retrieved = this.messengers.get(key);
@@ -101,163 +102,142 @@ class SyncBot extends procbot_1.ProcBot {
         return created;
     }
     createConnection(event, type) {
-        const sourceId = event.sourceIds[type];
-        const toId = event.toIds[type];
+        const sourceId = event.sourceIds.thread;
+        const toId = event.toIds.thread;
         if (!sourceId || !toId) {
             return Promise.reject(new Error(`Could not form ${type} connection`));
         }
-        const toEvent = {
+        const genericEvent = {
             action: 'create',
+            first: false,
             genesis: 'system',
-            private: true,
+            hidden: true,
             source: 'system',
             sourceIds: {
+                flow: '',
                 message: '',
-                room: '',
                 thread: '',
                 user: '',
             },
-            text: `Connects to ${event.source} ${type} ${sourceId}`,
-            to: event.to,
-            toIds: {
-                room: event.toIds.room,
-                thread: event.toIds.thread,
-            },
-            type: 'message',
+            text: 'duff',
+            to: 'duff',
+            toIds: {},
         };
-        const fromEvent = {
-            action: 'create',
-            genesis: 'system',
-            private: true,
-            source: 'system',
-            sourceIds: {
-                message: '',
-                room: '',
-                thread: '',
-                user: '',
-            },
-            text: `Connects to ${event.to} ${type} ${toId}`,
-            to: event.source,
-            toIds: {
-                room: event.sourceIds.room,
-                thread: event.sourceIds.thread,
-            },
-            type: 'message',
-        };
+        const toEvent = _.cloneDeep(genericEvent);
+        toEvent.text = `[Connects to ${event.source} ${type} ${sourceId}](${event.sourceIds.url})`;
+        toEvent.to = event.to;
+        toEvent.toIds = event.toIds;
+        const fromEvent = _.cloneDeep(genericEvent);
+        fromEvent.text = `[Connects to ${event.to} ${type} ${toId}](${event.toIds.url})`;
+        fromEvent.to = event.source;
+        fromEvent.toIds = event.sourceIds;
         return Promise.all([
-            this.searchSystem(fromEvent, 'user')
-                .then(() => this.searchSystem(fromEvent, 'token'))
-                .then(() => this.create(fromEvent, 'message')),
-            this.searchSystem(toEvent, 'user')
-                .then(() => this.searchSystem(toEvent, 'token'))
-                .then(() => this.create(toEvent, 'message'))
+            this.useSystem(fromEvent, 'user')
+                .then(() => this.useSystem(fromEvent, 'token'))
+                .then(() => this.create(fromEvent, 'comment'))
+                .then(() => this.logSuccess(fromEvent, 'comment')),
+            this.useSystem(toEvent, 'user')
+                .then(() => this.useSystem(toEvent, 'token'))
+                .then(() => this.create(toEvent, 'comment'))
+                .then(() => this.logSuccess(toEvent, 'comment'))
         ]).reduce(() => { });
     }
-    create(event, type) {
-        return this.dispatchToEmitter(event.to, {
-            contexts: {
-                [event.to]: message_converters_1.makeSpecific(event)
-            },
-            source: event.source
-        })
-            .then((retVal) => {
-            event.toIds[type] = retVal.response.ids[type];
-            return retVal.response.ids[type];
+    create(event, _type) {
+        return this.getMessageService(event.to).makeSpecific(event).then((specific) => {
+            return this.dispatchToEmitter(event.to, {
+                contexts: {
+                    [event.to]: specific
+                },
+                source: event.source
+            })
+                .then((retVal) => {
+                event.toIds.message = retVal.response.message;
+                event.toIds.thread = retVal.response.thread;
+                event.toIds.url = retVal.response.url;
+                return retVal.response.message;
+            });
         });
     }
-    logSuccess(event) {
-        this.logger.log(logger_1.LogLevel.INFO, `synced ${event.source}: ${event.text}`);
+    logSuccess(event, _type) {
+        const output = { source: event.source, title: event.title, text: event.text, target: event.to };
+        this.logger.log(logger_1.LogLevel.INFO, `Synced: ${JSON.stringify(output)}`);
     }
-    logError(event, message) {
+    logError(error, event) {
+        this.logger.log(logger_1.LogLevel.WARN, 'v!!!v');
+        this.logger.log(logger_1.LogLevel.WARN, error.message);
         this.logger.log(logger_1.LogLevel.WARN, JSON.stringify(event));
-        if (message) {
-            this.logger.log(logger_1.LogLevel.WARN, message);
-        }
+        this.logger.log(logger_1.LogLevel.WARN, '^!!!^');
     }
-    searchPrivateExistingOrGeneric(event, type) {
-        return this.searchPrivate(event, type)
-            .catch(() => this.searchExisting(event, type))
-            .catch(() => this.searchGeneric(event, type))
-            .catchThrow(new Error(`Could not find private, existing or generic ${type} for ${event.to}`));
+    useHubOrGeneric(event, type) {
+        return this.useHub(event, type)
+            .catch(() => this.useGeneric(event, type))
+            .catchThrow(new Error(`Could not find hub or generic ${type} for ${event.to}`));
     }
-    searchPrivateOrGeneric(event, type) {
-        return this.searchPrivate(event, type)
-            .catch(() => this.searchGeneric(event, type))
-            .catchThrow(new Error(`Could not find private or generic ${type} for ${event.to}`));
-    }
-    searchPairs(event, type) {
-        return new Promise((resolve) => {
-            const from = event.source;
-            const to = event.to;
-            const id = event.sourceIds[type];
-            if (!this.rooms[from] ||
-                !this.rooms[from][id] ||
-                !this.rooms[from][id][to]) {
-                throw new Error(`Could not find paired ${type} for ${event.to}`);
-            }
-            event.toIds[type] = this.rooms[from][id][to];
-            resolve(this.rooms[from][id][to]);
-        });
-    }
-    searchExisting(event, type) {
+    useProvided(event, type) {
         return new Promise((resolve) => {
             if (!event.sourceIds[type]) {
-                throw new Error(`Could not find existing ${type} for ${event.to}`);
+                throw new Error(`Could not find provided ${type} for ${event.to}`);
             }
             event.toIds[type] = event.sourceIds[type];
             resolve(event.toIds[type]);
         });
     }
-    searchGeneric(event, type) {
+    useGeneric(event, type) {
         return new Promise((resolve) => {
             const to = event.to;
-            if (!this.genericAccounts[to] ||
-                !this.genericAccounts[to][type]) {
+            const genericAccounts = JSON.parse(process.env.SYNCBOT_GENERIC_AUTHOR_ACCOUNTS);
+            if (!genericAccounts[to] || !genericAccounts[to][type]) {
                 throw new Error(`Could not find generic ${type} for ${event.to}`);
             }
-            event.toIds[type] = this.genericAccounts[to][type];
-            resolve(this.genericAccounts[to][type]);
+            event.toIds[type] = genericAccounts[to][type];
+            resolve(genericAccounts[to][type]);
         });
     }
-    searchSystem(event, type) {
+    useSystem(event, type) {
         return new Promise((resolve) => {
             const to = event.to;
-            if (!this.systemAccounts[to] ||
-                !this.systemAccounts[to][type]) {
+            const systemAccounts = JSON.parse(process.env.SYNCBOT_SYSTEM_MESSAGE_ACCOUNTS);
+            if (!systemAccounts[to] || !systemAccounts[to][type]) {
                 throw new Error(`Could not find system ${type} for ${event.to}`);
             }
-            event.toIds[type] = this.systemAccounts[to][type];
-            resolve(this.systemAccounts[to][type]);
+            event.toIds[type] = systemAccounts[to][type];
+            resolve(systemAccounts[to][type]);
         });
     }
-    searchHistory(event, type, attemptsLeft = 3) {
+    useConnected(event, type) {
         const findId = new RegExp(`Connects to ${event.to} ${type} ([\\w\\d-+\\/=]+)`, 'i');
         const messageService = this.getMessageService(event.source);
-        return messageService.fetchThread(event, findId)
+        return messageService.fetchNotes(event.sourceIds.thread, event.sourceIds.flow, findId)
             .then((result) => {
             const ids = result && result.length > 0 && result[0].match(findId);
             if (ids && ids.length > 0) {
-                event.toIds[type] = ids[1];
+                event.toIds.thread = ids[1];
                 return ids[1];
             }
-            else if (attemptsLeft > 0) {
-                return this.searchHistory(event, type, attemptsLeft - 1);
-            }
-            throw new Error(`Could not find history ${type} for ${event.to}`);
+            throw new Error(`Could not find connected ${type} for ${event.to}`);
         });
     }
-    searchPrivate(event, type) {
-        const findValue = new RegExp(`My ${event.to} ${type} is ([\\w\\d-+\\/=]+)`, 'i');
-        const messageService = this.getMessageService(event.source);
-        return messageService.fetchPrivateMessages(event, findValue)
-            .then((result) => {
-            const ids = result && result.length > 0 && result[result.length - 1].match(findValue);
-            if (ids && ids.length > 1) {
-                event.toIds[type] = ids[1];
-                return ids[1];
-            }
-            throw new Error(`Could not find private message ${type} for ${event.to}`);
-        });
+    useHub(event, type) {
+        let user = undefined;
+        if (event.source === process.env.SYNCBOT_HUB_SERVICE) {
+            user = event.sourceIds.user;
+        }
+        else if (event.to === process.env.SYNCBOT_HUB_SERVICE) {
+            user = event.toIds.user;
+        }
+        if (user) {
+            return this.hub.fetchValue(user, `${event.to} ${type}`)
+                .then((value) => {
+                event.toIds[type] = value;
+                return value;
+            })
+                .catch(() => {
+                throw new Error(`Could not find hub ${type} for ${event.to}`);
+            });
+        }
+        else {
+            return Promise.reject(new Error(`Could not find hub ${type} for ${event.to}`));
+        }
     }
 }
 exports.SyncBot = SyncBot;

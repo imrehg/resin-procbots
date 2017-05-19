@@ -17,13 +17,12 @@ limitations under the License.
 import { Session } from 'flowdock';
 import { ServiceAPIHandle, ServiceEmitContext } from './service-types';
 
-export interface FlowdockMessageEmitContext extends ServiceEmitContext {
+export interface FlowdockEmitContext extends ServiceEmitContext {
     content: string;
     event: 'message';
     external_user_name?: string;
-    flow: string;
-    tags?: string[];
     thread_id?: string;
+    flow?: string;
 }
 
 export interface FlowdockEmitRequestContext {

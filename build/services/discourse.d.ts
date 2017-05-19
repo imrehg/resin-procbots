@@ -1,20 +1,19 @@
 import * as Promise from 'bluebird';
-import { MessageEmitResponse, MessageEvent, MessageWorkerEvent, ReceiptContext } from '../utils/message-types';
-import { DiscourseMessageEmitContext } from './discourse-types';
+import { MessengerEmitResponse, MessengerEvent, ReceiptContext, TransmitContext } from '../utils/message-types';
+import { DiscourseHandle, DiscoursePostEmitContext, DiscourseTopicEmitContext } from './discourse-types';
 import { MessageService } from './message-service';
 import { ServiceEmitter, ServiceListener } from './service-types';
 export declare class DiscourseService extends MessageService implements ServiceListener, ServiceEmitter {
     private static _serviceName;
-    private topicCache;
     private postsSynced;
-    fetchThread(event: ReceiptContext, filter: RegExp): Promise<string[]>;
+    makeGeneric(data: MessengerEvent): Promise<ReceiptContext>;
+    makeSpecific(data: TransmitContext): Promise<DiscourseTopicEmitContext | DiscoursePostEmitContext>;
+    translateEventName(eventType: string): string;
+    fetchNotes(thread: string, _room: string, filter: RegExp): Promise<string[]>;
     protected activateMessageListener(): void;
-    protected sendMessage(data: DiscourseMessageEmitContext): Promise<MessageEmitResponse>;
-    protected getWorkerContextFromMessage(event: MessageWorkerEvent): string;
-    protected getEventTypeFromMessage(event: MessageEvent): string;
-    private fetchTopic(topicId);
+    protected sendPayload(data: DiscoursePostEmitContext | DiscourseTopicEmitContext): Promise<MessengerEmitResponse>;
     readonly serviceName: string;
-    readonly apiHandle: void;
+    readonly apiHandle: DiscourseHandle;
 }
 export declare function createServiceListener(): ServiceListener;
 export declare function createServiceEmitter(): ServiceEmitter;

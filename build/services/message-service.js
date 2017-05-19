@@ -18,30 +18,74 @@ class MessageService extends worker_client_1.WorkerClient {
             }).return();
         };
         this.getWorker = (event) => {
-            const context = this.getWorkerContextFromMessage(event);
+            const context = event.data.cookedEvent.context;
             const retrieved = this.workers.get(context);
             if (retrieved) {
                 return retrieved;
             }
-            else {
-                const created = new worker_1.Worker(context, this.removeWorker);
-                this.workers.set(context, created);
-                return created;
-            }
+            const created = new worker_1.Worker(context, this.removeWorker);
+            this.workers.set(context, created);
+            return created;
         };
         if (listener) {
             this.listen();
         }
     }
-    static get app() {
-        const port = process.env.MESSAGE_SERVICE_PORT || process.env.PORT;
-        if (!port) {
-            throw new Error('No inbound port specified for express server');
+    static initHandleContext(event, to, toIds = {}) {
+        return {
+            action: event.action,
+            first: event.first,
+            genesis: event.genesis,
+            hidden: event.hidden,
+            source: event.source,
+            sourceIds: event.sourceIds,
+            text: event.text,
+            title: event.title,
+            to,
+            toIds,
+        };
+    }
+    static stringifyMetadata(data, format = 'markdown') {
+        const publicIndicator = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
+        const privateIndicator = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
+        switch (format) {
+            case 'markdown':
+                return `[${data.hidden ? privateIndicator : publicIndicator}](${data.source})`;
+            case 'plaintext':
+                return `${data.hidden ? privateIndicator : publicIndicator}${data.source}`;
+            default:
+                throw new Error(`${format} format not recognised`);
         }
+    }
+    static extractMetadata(message) {
+        const visibleArray = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS);
+        const visible = visibleArray.join('|\\');
+        const hidden = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS).join('|\\');
+        const findMetadata = new RegExp(`(?:^|\\r|\\n)(?:\\s*)\\[?(${hidden}|${visible})\\]?\\(?(\\w*)\\)?`, 'i');
+        const metadata = message.match(findMetadata);
+        if (metadata) {
+            return {
+                content: message.replace(findMetadata, '').trim(),
+                genesis: metadata[2] || null,
+                hidden: !visibleArray.includes(metadata[1]),
+            };
+        }
+        return {
+            content: message,
+            genesis: null,
+            hidden: true,
+        };
+    }
+    static get app() {
         if (!MessageService._app) {
+            const port = process.env.MESSAGE_SERVICE_PORT || process.env.PORT;
+            if (!port) {
+                throw new Error('No inbound port specified for express server');
+            }
             MessageService._app = express();
             MessageService._app.use(bodyParser.json());
             MessageService._app.listen(port);
+            MessageService.logger.log(logger_1.LogLevel.INFO, `---> Started express webserver on port '${port}'`);
         }
         return MessageService._app;
     }
@@ -62,23 +106,15 @@ class MessageService extends worker_client_1.WorkerClient {
     }
     sendData(data) {
         if (data.contexts[this.serviceName]) {
-            return this.sendMessage(data.contexts[this.serviceName]);
+            return this.sendPayload(data.contexts[this.serviceName]);
         }
-        else {
-            return Promise.resolve({
-                err: new Error(`No ${this.serviceName} context`),
-                source: this.serviceName,
-            });
-        }
+        return Promise.resolve({
+            err: new Error(`No ${this.serviceName} context`),
+            source: this.serviceName,
+        });
     }
     queueEvent(data) {
         super.queueEvent(data);
-    }
-    fetchThread(_event, _filter) {
-        return Promise.reject(new Error('Not yet implemented'));
-    }
-    fetchPrivateMessages(_event, _filter) {
-        return Promise.reject(new Error('Not yet implemented'));
     }
 }
 MessageService.logger = new logger_1.Logger();

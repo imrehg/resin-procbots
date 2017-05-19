@@ -36,3 +36,8 @@ _dev_notes
 # tmp files
 *.swo
 *.swp
+
+# IDE Files
+/ProcBots.iml
+.idea
+.vscode

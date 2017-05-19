@@ -1,3 +1,19 @@
+/*
+ Copyright 2016-2017 Resin.io
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ */
+
 import * as Promise from 'bluebird';
 import * as bodyParser from 'body-parser';
 import * as express from 'express';
@@ -8,10 +24,11 @@ import {
     LogLevel,
 } from '../utils/logger';
 import {
-    MessageEmitResponse,
-    MessageEvent,
-    MessageWorkerEvent,
-    ReceiptContext,
+    HandleContext, HandleIds,
+    MessengerEmitResponse,
+    MessengerEvent,
+    MessengerWorkerEvent, Metadata,
+    ReceiptContext, TransmitContext,
 } from '../utils/message-types';
 import {
     ServiceAPIHandle,
@@ -22,34 +39,129 @@ import {
     ServiceRegistration,
 } from './service-types';
 
-/**
- * Abstract class to define a common set of utilities and standards for all messenger classes
- */
 export abstract class MessageService extends WorkerClient<string|null> implements ServiceListener, ServiceEmitter {
+    /**
+     * Make a handle context, using a receipt context and some extra information
+     * @param event - Event to be converted
+     * @param to - Destination for the handle context
+     * @param toIds - Pre-populate the toIds, if desired
+     * @returns {HandleContext} - newly created context for handling a message
+     */
+    public static initHandleContext(event: ReceiptContext, to: string, toIds: HandleIds = {}): HandleContext {
+        return {
+            // Details from the ReceiptContext
+            action: event.action,
+            first: event.first,
+            genesis: event.genesis,
+            hidden: event.hidden,
+            source: event.source,
+            sourceIds: event.sourceIds,
+            text: event.text,
+            title: event.title,
+            // Details from the arguments
+            to,
+            toIds,
+        };
+    }
+
+    /**
+     * A place to put output for debug and reference.
+     * @type {Logger}
+     */
     protected static logger = new Logger();
+
+    /**
+     * Encode the metadata of an event into a string to embed in the message
+     * @param data - event to gather details from
+     * @param format - Optional, markdown or plaintext, defaults to markdown
+     * @returns {string} - Text with data embedded
+     */
+    protected static stringifyMetadata(data: TransmitContext, format: 'markdown'|'plaintext' = 'markdown'): string {
+        // Retrieve publicity indicators from the environment
+        const publicIndicator = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS)[0];
+        const privateIndicator = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS)[0];
+        // Build the content with the indicator and genesis at the front
+        switch (format) {
+            case 'markdown':
+                return `[${data.hidden ? privateIndicator : publicIndicator}](${data.source})`;
+            case 'plaintext':
+                return `${data.hidden ? privateIndicator : publicIndicator}${data.source}`;
+            default:
+                throw new Error(`${format} format not recognised`);
+        }
+    }
+
+    /**
+     * Given a basic string this will extract a more rich context for the event, if embedded
+     * @param message - basic string that may contain metadata
+     * @returns {Metadata} - object of content, genesis and hidden
+     */
+    protected static extractMetadata(message: string): Metadata {
+        // Retrieve publicity indicators from the environment
+        const visibleArray = JSON.parse(process.env.MESSAGE_CONVERTOR_PUBLIC_INDICATORS);
+        const visible = visibleArray.join('|\\');
+        const hidden = JSON.parse(process.env.MESSAGE_CONVERTOR_PRIVATE_INDICATORS).join('|\\');
+        // Anchored with new line; followed by whitespace.
+        // Captured, the show/hide; brackets to enclose.
+        // Then comes genesis; parens may surround.
+        // The case we ignore; a Regex we form!
+        const findMetadata = new RegExp(`(?:^|\\r|\\n)(?:\\s*)\\[?(${hidden}|${visible})\\]?\\(?(\\w*)\\)?`, 'i');
+        const metadata = message.match(findMetadata);
+        if (metadata) {
+            // The content without the metadata, the word after the emoji, and whether the emoji is in the visible set
+            return {
+                content: message.replace(findMetadata, '').trim(),
+                genesis: metadata[2] || null,
+                hidden: !visibleArray.includes(metadata[1]),
+            };
+        }
+        // Return some default values if there wasn't any metadata
+        return {
+            content: message,
+            genesis: null,
+            hidden: true,
+        };
+    }
+
+    /**
+     * A singleton express instance for all web-hook based message services to share
+     * @type {Express}
+     */
     private static _app: express.Express;
+
+    /**
+     * A boolean flag for if this object has been activated as a listener
+     * @type {boolean}
+     */
     private listening: boolean = false;
+    /**
+     * An object of arrays storing events by trigger and their actions
+     */
     private _eventListeners: { [event: string]: ServiceRegistration[] } = {};
 
     /**
-     * All messenger classes share a single express instance
+     * Create or retrieve the singleton express app
+     * @returns {express.Express}
      */
     protected static get app(): express.Express {
-        // Heroku uses process.env.PORT to indicate which local area port the edge NAT maps down to
-        const port = process.env.MESSAGE_SERVICE_PORT || process.env.PORT;
-        if (!port) {
-            throw new Error('No inbound port specified for express server');
-        }
         if (!MessageService._app) {
+            // Either MESSAGE_SERVICE_PORT from environment or PORT from Heroku environment
+            const port = process.env.MESSAGE_SERVICE_PORT || process.env.PORT;
+            if (!port) {
+                throw new Error('No inbound port specified for express server');
+            }
+            // Create and log an express instance
             MessageService._app = express();
             MessageService._app.use(bodyParser.json());
             MessageService._app.listen(port);
+            MessageService.logger.log(LogLevel.INFO, `---> Started express webserver on port '${port}'`);
         }
         return MessageService._app;
     }
 
     /**
-     * @param listener selector for whether this instance should listen
+     * Build this service, specifying whether to awaken as a listener.
+     * @param listener - whether to start listening during construction
      */
     constructor(listener: boolean) {
         super();
@@ -59,9 +171,10 @@ export abstract class MessageService extends WorkerClient<string|null> implement
     }
 
     /**
-     * Instruct the child to start listening if we haven't already
+     * Start the object listening if it isn't already
      */
     public listen() {
+        // Ensure the code in the child object gets executed a maximum of once
         if (!this.listening) {
             this.listening = true;
             this.activateMessageListener();
@@ -70,97 +183,93 @@ export abstract class MessageService extends WorkerClient<string|null> implement
     }
 
     /**
-     * Express an interest in a particular type of event
-     * @param registration Object detailing event type, callback, etc
+     * Store an event of interest, so that the method gets triggered appropriately
+     * @param registration - Registration object with event trigger and other details
      */
     public registerEvent(registration: ServiceRegistration): void {
-        // For each event type being registered
+        // Store each event registration in an object of arrays.
         for (const event of registration.events) {
-            // Ensure we have a listener array for it
             if (this._eventListeners[event] == null) {
                 this._eventListeners[event] = [];
             }
-            // Store the expression of interest
             this._eventListeners[event].push(registration);
         }
     }
 
     /**
-     * Emit data to the external service
-     * @param data ServiceEmitRequest to parse
+     * Emit data to the service
+     * @param data - Service Emit Request to send, if relevant
+     * @returns {Promise<MessengerEmitResponse>} - Details of the successful transmission from the service
      */
-    public sendData(data: ServiceEmitRequest): Promise<MessageEmitResponse> {
-        // Check the contexts for relevance before passing down the inheritance
+    public sendData(data: ServiceEmitRequest): Promise<MessengerEmitResponse> {
+        // Check that the data has specifies a task for our emitter, before passing it on
         if (data.contexts[this.serviceName]) {
-            return this.sendMessage(data.contexts[this.serviceName]);
-        } else {
-            // If we have a context to emit to this service, then no-op is correct resolution
-            return Promise.resolve({
-                err: new Error(`No ${this.serviceName} context`),
-                source: this.serviceName,
-            });
+            return this.sendPayload(data.contexts[this.serviceName]);
         }
+        // If this data has no task for us then no-op is the correct resolution
+        return Promise.resolve({
+            err: new Error(`No ${this.serviceName} context`),
+            source: this.serviceName,
+        });
     }
 
-    /**
-     * Enqueue a MessageWorkerEvent
-     * @param data event to enqueue
+     /**
+     * Queue an event ready for running in a child.
+     * @param data - The WorkerEvent to add to the queue for processing.
      */
-    public queueEvent(data: MessageWorkerEvent) {
-        // This simply passes it up the chain...
-        // but ensures that MessageServices only enqueue the correct type
+    public queueEvent(data: MessengerWorkerEvent) {
+        // This type guards a simple pass-through
         super.queueEvent(data);
     }
 
-    // TODO: event should be in the same format as emitted
     /**
-     * Retrieve the comments in a thread that match an optional filter
-     * @param event details to identify the event
-     * @param filter regex of comments to match
+     * Promise to find the comment history of a particular thread
+     * @param thread - id of the thread to search
+     * @param room - id of the room in which the thread resides
+     * @param filter - criteria to match
      */
-    public fetchThread(_event: ReceiptContext, _filter: RegExp): Promise<string[]> {
-        return Promise.reject(new Error('Not yet implemented'));
-    }
-
-    // TODO: event should be in the same format as emitted
-    /**
-     * Retrieve the private message history with a user
-     * @param event details of the event to consider
-     * @param filter optional criteria that must be met
-     */
-    public fetchPrivateMessages(_event: ReceiptContext, _filter: RegExp): Promise<string[]> {
-        return Promise.reject(new Error('Not yet implemented'));
-    }
+    public abstract fetchNotes(thread: string, room: string, filter: RegExp): Promise<string[]>
 
     /**
-     * Activate this object as a listener
+     * Promise to turn the data enqueued into a generic message format
+     * @param data - Raw data from the enqueue, remembering this is as dumb and quick as possible
+     * @returns {Promise<ReceiptContext>} - A promise that resolves to the generic form of the event
+     */
+    public abstract makeGeneric(data: MessengerEvent): Promise<ReceiptContext>;
+
+    /**
+     * Promise to turn a generic message format into a form suitable for emitting
+     * @param data - Generic message format to encode
+     * @returns {Promise<ServiceEmitContext>} - A promise that resolves to an emit context, which is as dumb as possible
+     */
+    public abstract makeSpecific(data: TransmitContext): Promise<ServiceEmitContext>;
+
+    /**
+     * Turns the generic, messenger, name for an event into a specific trigger name for this class
+     * @param eventType - Name of the event to translate, eg 'message'
+     * @returns {string} - This class's equivalent, eg 'post'
+     */
+    public abstract translateEventName(eventType: string): string;
+
+    /**
+     * Awaken this class as a listener
      */
     protected abstract activateMessageListener(): void;
 
     /**
-     * Emit data to the API
-     * @param data emit context
+     * Deliver the payload to the service. Sourcing the relevant context has already been performed
+     * @param data - The object to be delivered to the service
+     * @returns {Promise<MessengerEmitResponse>} - Response from the service endpoint
      */
-    protected abstract sendMessage(data: ServiceEmitContext): Promise<MessageEmitResponse>
+    protected abstract sendPayload(data: ServiceEmitContext): Promise<MessengerEmitResponse>
 
     /**
-     * Retrieve the scope for event order preservation
-     * @param event details to examine
+     * Pass an event to registered listenerMethods
+     * @param event - enqueued event from the listener
+     * @returns {Bluebird<void>}
      */
-    protected abstract getWorkerContextFromMessage(event: MessageWorkerEvent): string
-
-    /**
-     * Retrieve the event type for event firing
-     * @param event details to examine
-     */
-    protected abstract getEventTypeFromMessage(event: MessageEvent): string
-
-    /**
-     * Handle an event once it's turn in the queue comes round
-     * Bound to the object instance using =>
-     */
-    protected handleEvent = (event: MessageEvent): Promise<void> => {
-        // Retrieve and execute all the listener methods, nerfing their responses
+    protected handleEvent = (event: MessengerEvent): Promise<void> => {
+        // Retrieve and execute all the listener methods, squashing their responses
         const listeners = this._eventListeners[event.cookedEvent.type] || [];
         return Promise.map(listeners, (listener) => {
             return listener.listenerMethod(listener, event);
@@ -168,20 +277,21 @@ export abstract class MessageService extends WorkerClient<string|null> implement
     }
 
     /**
-     * Retrieve or create a worker for an event
+     * Get a Worker object for the provided event, threaded by context
+     * @param event - event as enqueued by the listener
+     * @returns {Worker} - worker for the context associated
      */
-    protected getWorker = (event: MessageWorkerEvent): Worker<string|null> => {
+    protected getWorker = (event: MessengerWorkerEvent): Worker<string|null> => {
         // Attempt to retrieve an active worker for the context
-        const context = this.getWorkerContextFromMessage(event);
+        const context = event.data.cookedEvent.context;
         const retrieved = this.workers.get(context);
         if (retrieved) {
             return retrieved;
-        // Create and store a worker for the context
-        } else {
-            const created = new Worker<string>(context, this.removeWorker);
-            this.workers.set(context, created);
-            return created;
         }
+        // Create and store a worker for the context
+        const created = new Worker<string>(context, this.removeWorker);
+        this.workers.set(context, created);
+        return created;
     }
 
     /**
