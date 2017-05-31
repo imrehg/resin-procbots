@@ -283,8 +283,8 @@ export class SyncBot extends ProcBot {
         })
         .then((retVal) => {
             // Store and return the created id
-            event.toIds[type] = retVal.response.ids[type];
-            return retVal.response.ids[type];
+            event.toIds[type] = retVal.ids[type];
+            return retVal.ids[type];
         });
     }
 

@@ -21,7 +21,5 @@ export declare class VersionBot extends ProcBot {
     private checkValidMaintainer(config, event);
     private getConfiguration(owner, repo);
     private reportError(error);
-    private githubCall(context);
-    private flowdockCall(context);
 }
 export declare function createBot(): VersionBot;

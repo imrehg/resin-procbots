@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>MergeData | Resin ProcBots</title>
+	<title>GithubError | Resin ProcBots</title>
 	<meta name="description" content="">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="../assets/css/main.css">
@@ -54,24 +54,36 @@
 					<a href="../globals.html">Globals</a>
 				</li>
 				<li>
-					<a href="../modules/_bots_versionbot_.html">&quot;bots/versionbot&quot;</a>
+					<a href="../modules/_services_github_.html">&quot;services/github&quot;</a>
 				</li>
 				<li>
-					<a href="_bots_versionbot_.mergedata.html">MergeData</a>
+					<a href="_services_github_.githuberror.html">GithubError</a>
 				</li>
 			</ul>
-			<h1>Interface MergeData</h1>
+			<h1>Class GithubError</h1>
 		</div>
 	</div>
 </header>
 <div class="container container-main">
 	<div class="row">
 		<div class="col-8 col-content">
+			<section class="tsd-panel tsd-comment">
+				<div class="tsd-comment tsd-typography">
+					<div class="lead">
+						<p>Github Error.</p>
+					</div>
+				</div>
+			</section>
 			<section class="tsd-panel tsd-hierarchy">
 				<h3>Hierarchy</h3>
 				<ul class="tsd-hierarchy">
 					<li>
-						<span class="target">MergeData</span>
+						<span class="tsd-signature-type">TypeError</span>
+						<ul class="tsd-hierarchy">
+							<li>
+								<span class="target">GithubError</span>
+							</li>
+						</ul>
 					</li>
 				</ul>
 			</section>
@@ -79,57 +91,131 @@
 				<h2>Index</h2>
 				<section class="tsd-panel tsd-index-panel">
 					<div class="tsd-index-content">
-						<section class="tsd-index-section tsd-is-not-exported">
+						<section class="tsd-index-section ">
+							<h3>Constructors</h3>
+							<ul class="tsd-index-list">
+								<li class="tsd-kind-constructor tsd-parent-kind-class"><a href="_services_github_.githuberror.html#constructor" class="tsd-kind-icon">constructor</a></li>
+							</ul>
+						</section>
+						<section class="tsd-index-section ">
 							<h3>Properties</h3>
 							<ul class="tsd-index-list">
-								<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported"><a href="_bots_versionbot_.mergedata.html#commitversion" class="tsd-kind-icon">commit<wbr>Version</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported"><a href="_bots_versionbot_.mergedata.html#owner" class="tsd-kind-icon">owner</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported"><a href="_bots_versionbot_.mergedata.html#prnumber" class="tsd-kind-icon">pr<wbr>Number</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported"><a href="_bots_versionbot_.mergedata.html#reponame" class="tsd-kind-icon">repo<wbr>Name</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_services_github_.githuberror.html#documentationurl" class="tsd-kind-icon">documentation<wbr>Url</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_services_github_.githuberror.html#message" class="tsd-kind-icon">message</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-static"><a href="_services_github_.githuberror.html#typeerror" class="tsd-kind-icon">Type<wbr>Error</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-inherited tsd-is-static"><a href="_services_github_.githuberror.html#message-1" class="tsd-kind-icon">message</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-inherited tsd-is-static"><a href="_services_github_.githuberror.html#name" class="tsd-kind-icon">name</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-overwrite tsd-is-inherited tsd-is-static"><a href="_services_github_.githuberror.html#stack" class="tsd-kind-icon">stack</a></li>
 							</ul>
 						</section>
 					</div>
 				</section>
 			</section>
-			<section class="tsd-panel-group tsd-member-group tsd-is-not-exported">
+			<section class="tsd-panel-group tsd-member-group ">
+				<h2>Constructors</h2>
+				<section class="tsd-panel tsd-member tsd-kind-constructor tsd-parent-kind-class">
+					<a name="constructor" class="tsd-anchor"></a>
+					<h3>constructor</h3>
+					<ul class="tsd-signatures tsd-kind-constructor tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">new <wbr>Github<wbr>Error<span class="tsd-signature-symbol">(</span>error<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_services_github_.githuberror.html" class="tsd-signature-type">GithubError</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/resin-io-modules/resin-procbots/blob/master/lib/services/github.ts#L55">services/github.ts:55</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Should the error returned not be from the Github API but from the
+									REST layer, then the message from it is used instead.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>error: <span class="tsd-signature-type">any</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="_services_github_.githuberror.html" class="tsd-signature-type">GithubError</a></h4>
+						</li>
+					</ul>
+				</section>
+			</section>
+			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Properties</h2>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported">
-					<a name="commitversion" class="tsd-anchor"></a>
-					<h3>commit<wbr>Version</h3>
-					<div class="tsd-signature tsd-kind-icon">commit<wbr>Version<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="documentationurl" class="tsd-anchor"></a>
+					<h3>documentation<wbr>Url</h3>
+					<div class="tsd-signature tsd-kind-icon">documentation<wbr>Url<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/resin-io-modules/resin-procbots/blob/master/lib/bots/versionbot.ts#L71">bots/versionbot.ts:71</a></li>
+							<li>Defined in <a href="https://github.com/resin-io-modules/resin-procbots/blob/master/lib/services/github.ts#L55">services/github.ts:55</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>Documentation URL pertaining to the error.</p>
+						</div>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="message" class="tsd-anchor"></a>
+					<h3>message</h3>
+					<div class="tsd-signature tsd-kind-icon">message<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/resin-io-modules/resin-procbots/blob/master/lib/services/github.ts#L53">services/github.ts:53</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>Message error from the Github API.</p>
+						</div>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-static">
+					<a name="typeerror" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagStatic">Static</span> Type<wbr>Error</h3>
+					<div class="tsd-signature tsd-kind-icon">Type<wbr>Error<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">TypeErrorConstructor</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in /Work/github/versionbot-fixes/node_modules/typedoc/node_modules/typescript/lib/lib.es6.d.ts:972</li>
 						</ul>
 					</aside>
 				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported">
-					<a name="owner" class="tsd-anchor"></a>
-					<h3>owner</h3>
-					<div class="tsd-signature tsd-kind-icon">owner<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-inherited tsd-is-static">
+					<a name="message-1" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagStatic">Static</span> message</h3>
+					<div class="tsd-signature tsd-kind-icon">message<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
+						<p>Inherited from Error.message</p>
 						<ul>
-							<li>Defined in <a href="https://github.com/resin-io-modules/resin-procbots/blob/master/lib/bots/versionbot.ts#L72">bots/versionbot.ts:72</a></li>
+							<li>Defined in /Work/github/versionbot-fixes/node_modules/typedoc/node_modules/typescript/lib/lib.es6.d.ts:907</li>
 						</ul>
 					</aside>
 				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported">
-					<a name="prnumber" class="tsd-anchor"></a>
-					<h3>pr<wbr>Number</h3>
-					<div class="tsd-signature tsd-kind-icon">pr<wbr>Number<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-inherited tsd-is-static">
+					<a name="name" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagStatic">Static</span> name</h3>
+					<div class="tsd-signature tsd-kind-icon">name<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
+						<p>Inherited from Error.name</p>
 						<ul>
-							<li>Defined in <a href="https://github.com/resin-io-modules/resin-procbots/blob/master/lib/bots/versionbot.ts#L73">bots/versionbot.ts:73</a></li>
+							<li>Defined in /Work/github/versionbot-fixes/node_modules/typedoc/node_modules/typescript/lib/lib.es6.d.ts:906</li>
 						</ul>
 					</aside>
 				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported">
-					<a name="reponame" class="tsd-anchor"></a>
-					<h3>repo<wbr>Name</h3>
-					<div class="tsd-signature tsd-kind-icon">repo<wbr>Name<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-overwrite tsd-is-inherited tsd-is-static">
+					<a name="stack" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagStatic">Static</span> <span class="tsd-flag ts-flagOptional">Optional</span> stack</h3>
+					<div class="tsd-signature tsd-kind-icon">stack<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
+						<p>Inherited from Error.stack</p>
+						<p>Overrides Error.stack</p>
 						<ul>
-							<li>Defined in <a href="https://github.com/resin-io-modules/resin-procbots/blob/master/lib/bots/versionbot.ts#L74">bots/versionbot.ts:74</a></li>
+							<li>Defined in /Work/github/versionbot-fixes/node_modules/typedoc/node_modules/typescript/lib/lib.es6.d.ts:908</li>
 						</ul>
 					</aside>
 				</section>
@@ -147,7 +233,7 @@
 					<li class=" tsd-kind-external-module">
 						<a href="../modules/_bots_syncbot_.html">"bots/syncbot"</a>
 					</li>
-					<li class="current tsd-kind-external-module">
+					<li class=" tsd-kind-external-module">
 						<a href="../modules/_bots_versionbot_.html">"bots/versionbot"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
@@ -165,7 +251,7 @@
 					<li class=" tsd-kind-external-module">
 						<a href="../modules/_services_flowdock_.html">"services/flowdock"</a>
 					</li>
-					<li class=" tsd-kind-external-module">
+					<li class="current tsd-kind-external-module">
 						<a href="../modules/_services_github_.html">"services/github"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
@@ -181,83 +267,47 @@
 			</nav>
 			<nav class="tsd-navigation secondary menu-sticky">
 				<ul class="before-current">
-					<li class=" tsd-kind-enum tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="../enums/_bots_versionbot_.statuschecks.html" class="tsd-kind-icon">Status<wbr>Checks</a>
-					</li>
-					<li class=" tsd-kind-class tsd-parent-kind-external-module">
-						<a href="../classes/_bots_versionbot_.versionbot.html" class="tsd-kind-icon">Version<wbr>Bot</a>
-					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="_bots_versionbot_.encodedfile.html" class="tsd-kind-icon">Encoded<wbr>File</a>
-					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="_bots_versionbot_.fserror.html" class="tsd-kind-icon">FSError</a>
-					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="_bots_versionbot_.filemapping.html" class="tsd-kind-icon">File<wbr>Mapping</a>
-					</li>
 				</ul>
 				<ul class="current">
-					<li class="current tsd-kind-interface tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="_bots_versionbot_.mergedata.html" class="tsd-kind-icon">Merge<wbr>Data</a>
+					<li class="current tsd-kind-class tsd-parent-kind-external-module">
+						<a href="_services_github_.githuberror.html" class="tsd-kind-icon">Github<wbr>Error</a>
 						<ul>
-							<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported">
-								<a href="_bots_versionbot_.mergedata.html#commitversion" class="tsd-kind-icon">commit<wbr>Version</a>
+							<li class=" tsd-kind-constructor tsd-parent-kind-class">
+								<a href="_services_github_.githuberror.html#constructor" class="tsd-kind-icon">constructor</a>
 							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported">
-								<a href="_bots_versionbot_.mergedata.html#owner" class="tsd-kind-icon">owner</a>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_services_github_.githuberror.html#documentationurl" class="tsd-kind-icon">documentation<wbr>Url</a>
 							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported">
-								<a href="_bots_versionbot_.mergedata.html#prnumber" class="tsd-kind-icon">pr<wbr>Number</a>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_services_github_.githuberror.html#message" class="tsd-kind-icon">message</a>
 							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface tsd-is-not-exported">
-								<a href="_bots_versionbot_.mergedata.html#reponame" class="tsd-kind-icon">repo<wbr>Name</a>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-static">
+								<a href="_services_github_.githuberror.html#typeerror" class="tsd-kind-icon">Type<wbr>Error</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-inherited tsd-is-static">
+								<a href="_services_github_.githuberror.html#message-1" class="tsd-kind-icon">message</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-inherited tsd-is-static">
+								<a href="_services_github_.githuberror.html#name" class="tsd-kind-icon">name</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-overwrite tsd-is-inherited tsd-is-static">
+								<a href="_services_github_.githuberror.html#stack" class="tsd-kind-icon">stack</a>
 							</li>
 						</ul>
 					</li>
 				</ul>
 				<ul class="after-current">
-					<li class=" tsd-kind-interface tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="_bots_versionbot_.repofiledata.html" class="tsd-kind-icon">Repo<wbr>File<wbr>Data</a>
+					<li class=" tsd-kind-class tsd-parent-kind-external-module">
+						<a href="_services_github_.githubservice.html" class="tsd-kind-icon">Github<wbr>Service</a>
 					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="_bots_versionbot_.statusresult.html" class="tsd-kind-icon">Status<wbr>Result</a>
-					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="_bots_versionbot_.versionbotconfiguration.html" class="tsd-kind-icon">Version<wbr>Bot<wbr>Configuration</a>
-					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="_bots_versionbot_.versionboterror.html" class="tsd-kind-icon">Version<wbr>Bot<wbr>Error</a>
-					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="_bots_versionbot_.versionistdata.html" class="tsd-kind-icon">Versionist<wbr>Data</a>
-					</li>
-					<li class=" tsd-kind-type-alias tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="../modules/_bots_versionbot_.html#genericpullrequestevent" class="tsd-kind-icon">Generic<wbr>Pull<wbr>Request<wbr>Event</a>
-					</li>
-					<li class=" tsd-kind-variable tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="../modules/_bots_versionbot_.html#ignorelabel" class="tsd-kind-icon">Ignore<wbr>Label</a>
-					</li>
-					<li class=" tsd-kind-variable tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="../modules/_bots_versionbot_.html#mergelabel" class="tsd-kind-icon">Merge<wbr>Label</a>
-					</li>
-					<li class=" tsd-kind-variable tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="../modules/_bots_versionbot_.html#exec" class="tsd-kind-icon">exec</a>
-					</li>
-					<li class=" tsd-kind-variable tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="../modules/_bots_versionbot_.html#fsfileexists" class="tsd-kind-icon">fs<wbr>File<wbr>Exists</a>
-					</li>
-					<li class=" tsd-kind-variable tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="../modules/_bots_versionbot_.html#fsreadfile" class="tsd-kind-icon">fs<wbr>Read<wbr>File</a>
-					</li>
-					<li class=" tsd-kind-variable tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="../modules/_bots_versionbot_.html#tempcleanup" class="tsd-kind-icon">temp<wbr>Cleanup</a>
-					</li>
-					<li class=" tsd-kind-variable tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="../modules/_bots_versionbot_.html#tempmkdir" class="tsd-kind-icon">temp<wbr>Mkdir</a>
+						<a href="../interfaces/_services_github_.labeldetails.html" class="tsd-kind-icon">Label<wbr>Details</a>
 					</li>
 					<li class=" tsd-kind-function tsd-parent-kind-external-module">
-						<a href="../modules/_bots_versionbot_.html#createbot" class="tsd-kind-icon">create<wbr>Bot</a>
+						<a href="../modules/_services_github_.html#createserviceemitter" class="tsd-kind-icon">create<wbr>Service<wbr>Emitter</a>
+					</li>
+					<li class=" tsd-kind-function tsd-parent-kind-external-module">
+						<a href="../modules/_services_github_.html#createservicelistener" class="tsd-kind-icon">create<wbr>Service<wbr>Listener</a>
 					</li>
 				</ul>
 			</nav>

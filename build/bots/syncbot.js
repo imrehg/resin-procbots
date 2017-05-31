@@ -161,8 +161,8 @@ class SyncBot extends procbot_1.ProcBot {
             source: event.source
         })
             .then((retVal) => {
-            event.toIds[type] = retVal.response.ids[type];
-            return retVal.response.ids[type];
+            event.toIds[type] = retVal.ids[type];
+            return retVal.ids[type];
         });
     }
     logSuccess(event) {

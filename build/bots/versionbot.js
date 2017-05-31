@@ -36,7 +36,7 @@ class VersionBot extends procbot_1.ProcBot {
                 return Promise.resolve();
             }
             return Promise.map(branches, (branch) => {
-                return this.githubCall({
+                return this.dispatchToEmitter(this.githubEmitterName, {
                     data: {
                         head: `${owner}:${branch.name}`,
                         owner,
@@ -100,7 +100,7 @@ class VersionBot extends procbot_1.ProcBot {
             this.logger.log(logger_1.LogLevel.INFO, `Checking ${owner}/${repo}#${prNumber} for potential Waffleboard connection ` +
                 'comments');
             generateWaffleReference(pr.body);
-            return this.githubCall({
+            return this.dispatchToEmitter(this.githubEmitterName, {
                 data: {
                     number: prNumber,
                     owner,
@@ -121,7 +121,7 @@ class VersionBot extends procbot_1.ProcBot {
                     }
                 });
                 if (body !== pr.body) {
-                    return this.githubCall({
+                    return this.dispatchToEmitter(this.githubEmitterName, {
                         data: {
                             body,
                             number: prNumber,
@@ -143,7 +143,7 @@ class VersionBot extends procbot_1.ProcBot {
                 return Promise.resolve();
             }
             this.logger.log(logger_1.LogLevel.INFO, `Checking version for ${owner}/${name}#${pr.number}`);
-            return this.githubCall({
+            return this.dispatchToEmitter(this.githubEmitterName, {
                 data: {
                     owner,
                     number: pr.number,
@@ -167,7 +167,7 @@ class VersionBot extends procbot_1.ProcBot {
                     }
                 }
                 if (changetypeFound) {
-                    return this.githubCall({
+                    return this.dispatchToEmitter(this.githubEmitterName, {
                         data: {
                             context: 'Versionist',
                             description: 'Found a valid Versionist `Change-Type` tag',
@@ -181,7 +181,7 @@ class VersionBot extends procbot_1.ProcBot {
                 }
                 this.logger.log(logger_1.LogLevel.INFO, "No valid 'Change-Type' tag found, failing last commit " +
                     `for ${owner}/${name}#${pr.number}`);
-                return this.githubCall({
+                return this.dispatchToEmitter(this.githubEmitterName, {
                     data: {
                         context: 'Versionist',
                         description: 'None of the commits in the PR have a `Change-Type` tag',
@@ -193,7 +193,7 @@ class VersionBot extends procbot_1.ProcBot {
                     method: this.githubApi.repos.createStatus,
                 }).then(() => {
                     if (event.cookedEvent.data.action === 'opened') {
-                        return this.githubCall({
+                        return this.dispatchToEmitter(this.githubEmitterName, {
                             data: {
                                 body: `@${event.cookedEvent.data.sender.login}, please ensure that at least one commit ` +
                                     'contains a `Change-Type:` tag.',
@@ -206,7 +206,7 @@ class VersionBot extends procbot_1.ProcBot {
                     }
                 });
             }).then(() => {
-                return this.githubCall({
+                return this.dispatchToEmitter(this.githubEmitterName, {
                     data: {
                         number: pr.number,
                         owner,
@@ -216,7 +216,7 @@ class VersionBot extends procbot_1.ProcBot {
                 });
             }).then((labels) => {
                 if (_.some(labels, (label) => label.name === MergeLabel)) {
-                    return this.githubCall({
+                    return this.dispatchToEmitter(this.githubEmitterName, {
                         data: {
                             number: pr.number,
                             owner,
@@ -266,7 +266,7 @@ class VersionBot extends procbot_1.ProcBot {
                 `version up for ${owner}/${repo}#${pr.number}`);
             return this.getConfiguration(owner, repo).then((config) => {
                 botConfig = config;
-                return this.githubCall({
+                return this.dispatchToEmitter(this.githubEmitterName, {
                     data: {
                         number: pr.number,
                         owner,
@@ -362,15 +362,14 @@ class VersionBot extends procbot_1.ProcBot {
                                 });
                             }).then(() => {
                                 if (process.env.VERSIONBOT_FLOWDOCK_ROOM) {
-                                    const flowdockMessage = {
+                                    this.dispatchToEmitter(this.flowdockEmitterName, {
                                         content: `${process.env.VERSIONBOT_NAME} has now merged the above PR, located ` +
                                             `here: ${prInfo.html_url}.`,
                                         from_address: process.env.VERSIONBOT_EMAIL,
                                         roomId: process.env.VERSIONBOT_FLOWDOCK_ROOM,
                                         source: process.env.VERSIONBOT_NAME,
                                         subject: `${process.env.VERSIONBOT_NAME} merged ${owner}/${repo}#${prInfo.number}`
-                                    };
-                                    this.flowdockCall(flowdockMessage);
+                                    });
                                 }
                                 this.logger.log(logger_1.LogLevel.INFO, `MergePR: Merged ${owner}/${repo}#${prInfo.number}`);
                             }).catch((err) => {
@@ -523,7 +522,7 @@ class VersionBot extends procbot_1.ProcBot {
     }
     createCommitBlobs(repoData) {
         let newTreeSha;
-        return this.githubCall({
+        return this.dispatchToEmitter(this.githubEmitterName, {
             data: {
                 owner: repoData.owner,
                 repo: repoData.repo,
@@ -539,7 +538,7 @@ class VersionBot extends procbot_1.ProcBot {
                     throw new Error(`Couldn't find a git tree entry for the file ${file.file}`);
                 }
                 file.treeEntry = treeEntry;
-                return this.githubCall({
+                return this.dispatchToEmitter(this.githubEmitterName, {
                     data: {
                         content: file.encoding,
                         encoding: 'base64',
@@ -562,7 +561,7 @@ class VersionBot extends procbot_1.ProcBot {
                         type: 'blob'
                     });
                 });
-                return this.githubCall({
+                return this.dispatchToEmitter(this.githubEmitterName, {
                     data: {
                         base_tree: treeData.sha,
                         owner: repoData.owner,
@@ -573,7 +572,7 @@ class VersionBot extends procbot_1.ProcBot {
                 });
             }).then((newTree) => {
                 newTreeSha = newTree.sha;
-                return this.githubCall({
+                return this.dispatchToEmitter(this.githubEmitterName, {
                     data: {
                         owner: repoData.owner,
                         repo: repoData.repo,
@@ -582,7 +581,7 @@ class VersionBot extends procbot_1.ProcBot {
                     method: this.githubApi.repos.getCommit
                 });
             }).then((lastCommit) => {
-                return this.githubCall({
+                return this.dispatchToEmitter(this.githubEmitterName, {
                     data: {
                         committer: {
                             email: process.env.VERSIONBOT_EMAIL,
@@ -597,7 +596,7 @@ class VersionBot extends procbot_1.ProcBot {
                     method: this.githubApi.gitdata.createCommit
                 });
             }).then((commit) => {
-                return this.githubCall({
+                return this.dispatchToEmitter(this.githubEmitterName, {
                     data: {
                         force: false,
                         owner: repoData.owner,
@@ -611,7 +610,7 @@ class VersionBot extends procbot_1.ProcBot {
         });
     }
     mergeToMaster(data) {
-        return this.githubCall({
+        return this.dispatchToEmitter(this.githubEmitterName, {
             data: {
                 commit_title: `Auto-merge for PR #${data.prNumber} via ${process.env.VERSIONBOT_NAME}`,
                 number: data.prNumber,
@@ -620,7 +619,7 @@ class VersionBot extends procbot_1.ProcBot {
             },
             method: this.githubApi.pullRequests.merge
         }).then((mergedData) => {
-            return this.githubCall({
+            return this.dispatchToEmitter(this.githubEmitterName, {
                 data: {
                     message: data.commitVersion,
                     object: mergedData.sha,
@@ -636,7 +635,7 @@ class VersionBot extends procbot_1.ProcBot {
                 method: this.githubApi.gitdata.createTag
             });
         }).then((newTag) => {
-            return this.githubCall({
+            return this.dispatchToEmitter(this.githubEmitterName, {
                 data: {
                     owner: data.owner,
                     ref: `refs/tags/${data.commitVersion}`,
@@ -646,7 +645,7 @@ class VersionBot extends procbot_1.ProcBot {
                 method: this.githubApi.gitdata.createReference
             });
         }).then(() => {
-            return this.githubCall({
+            return this.dispatchToEmitter(this.githubEmitterName, {
                 data: {
                     name: MergeLabel,
                     number: data.prNumber,
@@ -656,7 +655,7 @@ class VersionBot extends procbot_1.ProcBot {
                 method: this.githubApi.issues.removeLabel
             });
         }).then(() => {
-            return this.githubCall({
+            return this.dispatchToEmitter(this.githubEmitterName, {
                 data: {
                     number: data.prNumber,
                     owner: data.owner,
@@ -666,7 +665,7 @@ class VersionBot extends procbot_1.ProcBot {
             });
         }).then((prInfo) => {
             const branchName = prInfo.head.ref;
-            return this.githubCall({
+            return this.dispatchToEmitter(this.githubEmitterName, {
                 data: {
                     owner: data.owner,
                     ref: `heads/${branchName}`,
@@ -678,7 +677,7 @@ class VersionBot extends procbot_1.ProcBot {
             if (err.message !== 'Pull Request is not mergeable') {
                 throw err;
             }
-            return this.githubCall({
+            return this.dispatchToEmitter(this.githubEmitterName, {
                 data: {
                     number: data.prNumber,
                     owner: data.owner,
@@ -702,7 +701,7 @@ class VersionBot extends procbot_1.ProcBot {
             pending: StatusChecks.Pending,
             success: StatusChecks.Passed,
         };
-        return this.githubCall({
+        return this.dispatchToEmitter(this.githubEmitterName, {
             data: {
                 branch: 'master',
                 owner,
@@ -711,7 +710,7 @@ class VersionBot extends procbot_1.ProcBot {
             method: this.githubApi.repos.getProtectedBranchRequiredStatusChecks
         }).then((statusContexts) => {
             protectedContexts = statusContexts.contexts;
-            return this.githubCall({
+            return this.dispatchToEmitter(this.githubEmitterName, {
                 data: {
                     owner,
                     ref: branch,
@@ -744,7 +743,7 @@ class VersionBot extends procbot_1.ProcBot {
     getVersionBotCommits(prInfo) {
         const owner = prInfo.head.repo.owner.login;
         const repo = prInfo.head.repo.name;
-        return this.githubCall({
+        return this.dispatchToEmitter(this.githubEmitterName, {
             data: {
                 owner,
                 repo,
@@ -775,27 +774,14 @@ class VersionBot extends procbot_1.ProcBot {
         }
     }
     getConfiguration(owner, repo) {
-        const request = {
-            contexts: {},
-            source: process.env.VERSIONBOT_NAME
-        };
-        request.contexts[this.githubEmitterName] = {
+        return this.retrieveConfiguration(this.githubEmitterName, {
             data: {
                 owner,
                 repo,
                 path: '.procbots.yml'
             },
             method: this.githubApi.repos.getContent
-        };
-        return this.retrieveConfiguration(this.githubEmitterName, request)
-            .then((configRes) => {
-            if (configRes.err) {
-                const ghError = JSON.parse(configRes.err.message);
-                if (ghError.message === 'Not Found') {
-                    return;
-                }
-            }
-            const configData = configRes.response;
+        }).then((configData) => {
             if (configData.encoding !== 'base64') {
                 this.logger.log(logger_1.LogLevel.WARN, `A config file exists for ${owner}/${repo} but is not ` +
                     `Base64 encoded! Ignoring.`);
@@ -803,21 +789,24 @@ class VersionBot extends procbot_1.ProcBot {
             }
             return this.processConfiguration(Buffer.from(configData.content, 'base64')
                 .toString());
+        }).catch((err) => {
+            if (err.message !== 'Not Found') {
+                throw err;
+            }
         });
     }
     reportError(error) {
         if (process.env.VERSIONBOT_FLOWDOCK_ROOM) {
-            const flowdockMessage = {
+            this.dispatchToEmitter(this.flowdockEmitterName, {
                 content: error.message,
                 from_address: process.env.VERSIONBOT_EMAIL,
                 roomId: process.env.VERSIONBOT_FLOWDOCK_ROOM,
                 source: process.env.VERSIONBOT_NAME,
                 subject: error.brief,
                 tags: ['devops']
-            };
-            this.flowdockCall(flowdockMessage);
+            });
         }
-        this.githubCall({
+        this.dispatchToEmitter(this.githubEmitterName, {
             data: {
                 body: error.message,
                 number: error.number,
@@ -827,33 +816,6 @@ class VersionBot extends procbot_1.ProcBot {
             method: this.githubApi.issues.createComment
         });
         this.logger.alert(logger_1.AlertLevel.ERROR, error.message);
-    }
-    githubCall(context) {
-        const request = {
-            contexts: {},
-            source: process.env.VERSIONBOT_NAME
-        };
-        request.contexts[this.githubEmitterName] = context;
-        return this.dispatchToEmitter(this.githubEmitterName, request).then((data) => {
-            if (data.err) {
-                const ghError = JSON.parse(data.err.message);
-                throw new Error(ghError.message);
-            }
-            return data.response;
-        });
-    }
-    flowdockCall(context) {
-        const request = {
-            contexts: {},
-            source: process.env.VERSIONBOT_NAME
-        };
-        request.contexts[this.flowdockEmitterName] = context;
-        return this.dispatchToEmitter(this.flowdockEmitterName, request).then((data) => {
-            if (data.err) {
-                throw data.err;
-            }
-            return data.response;
-        });
     }
 }
 exports.VersionBot = VersionBot;

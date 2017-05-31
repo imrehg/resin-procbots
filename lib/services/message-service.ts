@@ -1,6 +1,7 @@
 import * as Promise from 'bluebird';
 import * as bodyParser from 'body-parser';
 import * as express from 'express';
+import TypedError = require('typed-error');
 import { Worker } from '../framework/worker';
 import { WorkerClient } from '../framework/worker-client';
 import {
@@ -96,7 +97,7 @@ export abstract class MessageService extends WorkerClient<string|null> implement
         } else {
             // If we have a context to emit to this service, then no-op is correct resolution
             return Promise.resolve({
-                err: new Error(`No ${this.serviceName} context`),
+                err: new TypedError(`No ${this.serviceName} context`),
                 source: this.serviceName,
             });
         }
