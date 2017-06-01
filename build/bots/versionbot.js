@@ -361,16 +361,6 @@ class VersionBot extends procbot_1.ProcBot {
                                     repoName: repo
                                 });
                             }).then(() => {
-                                if (process.env.VERSIONBOT_FLOWDOCK_ROOM) {
-                                    this.dispatchToEmitter(this.flowdockEmitterName, {
-                                        content: `${process.env.VERSIONBOT_NAME} has now merged the above PR, located ` +
-                                            `here: ${prInfo.html_url}.`,
-                                        from_address: process.env.VERSIONBOT_EMAIL,
-                                        roomId: process.env.VERSIONBOT_FLOWDOCK_ROOM,
-                                        source: process.env.VERSIONBOT_NAME,
-                                        subject: `${process.env.VERSIONBOT_NAME} merged ${owner}/${repo}#${prInfo.number}`
-                                    });
-                                }
                                 this.logger.log(logger_1.LogLevel.INFO, `MergePR: Merged ${owner}/${repo}#${prInfo.number}`);
                             }).catch((err) => {
                                 if (!_.startsWith(err.message, 'Required status check')) {
@@ -414,13 +404,6 @@ class VersionBot extends procbot_1.ProcBot {
         this.githubApi = ghEmitter.apiHandle.github;
         if (!this.githubApi) {
             throw new Error('No Github API instance found');
-        }
-        if (process.env.VERSIONBOT_FLOWDOCK_ROOM) {
-            const fdEmitter = this.addServiceEmitter('flowdock');
-            if (!fdEmitter) {
-                throw new Error("Couldn't create a Flowdock emitter");
-            }
-            this.flowdockEmitterName = fdEmitter.serviceName;
         }
         _.forEach([
             {
@@ -796,16 +779,6 @@ class VersionBot extends procbot_1.ProcBot {
         });
     }
     reportError(error) {
-        if (process.env.VERSIONBOT_FLOWDOCK_ROOM) {
-            this.dispatchToEmitter(this.flowdockEmitterName, {
-                content: error.message,
-                from_address: process.env.VERSIONBOT_EMAIL,
-                roomId: process.env.VERSIONBOT_FLOWDOCK_ROOM,
-                source: process.env.VERSIONBOT_NAME,
-                subject: error.brief,
-                tags: ['devops']
-            });
-        }
         this.dispatchToEmitter(this.githubEmitterName, {
             data: {
                 body: error.message,

@@ -5,7 +5,6 @@ import { ServiceEvent } from '../services/service-types';
 export declare class VersionBot extends ProcBot {
     private githubListenerName;
     private githubEmitterName;
-    private flowdockEmitterName;
     private githubApi;
     constructor(integration: number, name: string, pemString: string, webhook: string);
     protected statusChange: (registration: GithubRegistration, event: ServiceEvent) => Promise<void | void[]>;

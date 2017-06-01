@@ -142,8 +142,6 @@ export class VersionBot extends ProcBot {
     private githubListenerName: string;
     /** Github ServiceEmitter. */
     private githubEmitterName: string;
-    /** Flowdock ServiceEmitter. */
-    private flowdockEmitterName: string;
     /** Instance of Github SDK API in use. */
     private githubApi: GithubApi;
 
@@ -197,16 +195,6 @@ export class VersionBot extends ProcBot {
         this.githubApi = (<GithubHandle>ghEmitter.apiHandle).github;
         if (!this.githubApi) {
             throw new Error('No Github API instance found');
-        }
-
-        // Create a new Flowdock emitter, should we need one.
-        if (process.env.VERSIONBOT_FLOWDOCK_ROOM) {
-            const fdEmitter = this.addServiceEmitter('flowdock');
-
-            if (!fdEmitter) {
-                throw new Error("Couldn't create a Flowdock emitter");
-            }
-            this.flowdockEmitterName = fdEmitter.serviceName;
         }
 
         // We have two different WorkerMethods here:
@@ -1231,18 +1219,7 @@ export class VersionBot extends ProcBot {
                                 repoName: repo
                             });
                         }).then(() => {
-                            // No tags here, just mention it in Flowdock so its searchable.
                             // It's not an error so doesn't need logging.
-                            if (process.env.VERSIONBOT_FLOWDOCK_ROOM) {
-                                this.dispatchToEmitter(this.flowdockEmitterName, {
-                                    content: `${process.env.VERSIONBOT_NAME} has now merged the above PR, located ` +
-                                        `here: ${prInfo.html_url}.`,
-                                    from_address: process.env.VERSIONBOT_EMAIL,
-                                    roomId: process.env.VERSIONBOT_FLOWDOCK_ROOM,
-                                    source: process.env.VERSIONBOT_NAME,
-                                    subject: `${process.env.VERSIONBOT_NAME} merged ${owner}/${repo}#${prInfo.number}`
-                                });
-                            }
                             this.logger.log(LogLevel.INFO, `MergePR: Merged ${owner}/${repo}#${prInfo.number}`);
                         }).catch((err: Error) => {
                             // It's possible in some cases that we have to wait for a service that doesn't actually
@@ -1326,21 +1303,6 @@ export class VersionBot extends ProcBot {
      * @param error The error to report.
      */
     private reportError(error: VersionBotError): void {
-        // We create several reports from this error:
-        //  * Flowdock team inbox post in the relevant room
-        //  * Comment on the PR affected
-        //  * Local console log
-        if (process.env.VERSIONBOT_FLOWDOCK_ROOM) {
-            this.dispatchToEmitter(this.flowdockEmitterName, {
-                content: error.message,
-                from_address: process.env.VERSIONBOT_EMAIL,
-                roomId: process.env.VERSIONBOT_FLOWDOCK_ROOM,
-                source: process.env.VERSIONBOT_NAME,
-                subject: error.brief,
-                tags: [ 'devops' ]
-            });
-        }
-
         // Post a comment to the relevant PR, also detailing the issue.
         this.dispatchToEmitter(this.githubEmitterName, {
             data: {
@@ -1352,6 +1314,7 @@ export class VersionBot extends ProcBot {
             method: this.githubApi.issues.createComment
         });
 
+        // Log to console.
         this.logger.alert(AlertLevel.ERROR, error.message);
     }
 }
